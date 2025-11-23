@@ -8,6 +8,7 @@ public class SpringChatMatchingApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(SpringChatMatchingApplication.class, args);
+        System.out.println("Hello World!");
     }
 
 }
