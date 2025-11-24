@@ -18,33 +18,26 @@ public class CounselorStatusService {
 
     @Transactional
     public void updateStatus(long counselorId, CounselorStatusUpdateRequest req) {
+
         CounselorStatus status = req.getStatus();
         Long categoryId = req.getCategoryId();
 
-        // 기본 상태 변경
-        String statusKey = RedisKeyManager.counselorStatus(counselorId);
-        redisTemplate.opsForValue().set(statusKey, status.name());
+        // 상태 저장
+        redisTemplate.opsForValue().set(RedisKeyManager.counselorStatus(counselorId), status.name());
 
+        // OFFLINE → 카테고리 SET 제거
         if (status == CounselorStatus.OFFLINE) {
-            // 필요하면 category:*:counselors 에서 제거
-            if (categoryId != null) {
-                String setKey = RedisKeyManager.categoryCounselors(categoryId);
-                redisTemplate.opsForSet().remove(setKey, String.valueOf(counselorId));
-            }
+            if (categoryId != null)
+                redisTemplate.opsForSet().remove(RedisKeyManager.categoryCounselors(categoryId), counselorId);
             return;
         }
 
-        // ONLINE / AFTER_CALL 이면 카테고리 SET에 추가
-        if (categoryId != null) {
-            String setKey = RedisKeyManager.categoryCounselors(categoryId);
-            redisTemplate.opsForSet().add(setKey, String.valueOf(counselorId));
-        }
+        // ONLINE / AFTER_CALL → 카테고리 SET 등록
+        if (categoryId != null)
+            redisTemplate.opsForSet().add(RedisKeyManager.categoryCounselors(categoryId), counselorId);
 
-        // READY(ONLINE / AFTER_CALL) 상태면 매칭 시도
-        if (status == CounselorStatus.ONLINE || status == CounselorStatus.AFTER_CALL) {
-            if (categoryId != null) {
-                matchingService.tryMatch(categoryId);
-            }
-        }
+        // READY 상태면 매칭 시도
+        if (status == CounselorStatus.ONLINE || status == CounselorStatus.AFTER_CALL)
+            matchingService.tryMatch(categoryId);
     }
 }

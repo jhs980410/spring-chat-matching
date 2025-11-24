@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class CounselorStatusUpdateRequest {
-    private CounselorStatus status; // ONLINE / AFTER_CALL / OFFLINE
-    private Long categoryId;        // 어느 카테고리 대기열에 참여하는지 (필요 시)
+    private Long counselorId;
+    private CounselorStatus status;
+    private Long categoryId;
 }

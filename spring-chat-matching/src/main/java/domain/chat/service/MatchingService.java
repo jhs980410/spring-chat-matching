@@ -15,107 +15,77 @@ import java.util.*;
 public class MatchingService {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ChatSessionRepository chatSessionRepository; // DB에 세션 배정 반영용
+    private final ChatSessionRepository chatSessionRepository;
 
-    /**
-     * 상담사가 READY(ONLINE/AFTER_CALL) 상태가 될 때 호출.
-     * categoryId 기준으로 대기열에서 하나 꺼내서 해당 상담사로 배정 or
-     * 전체 후보 중 최적 상담사 선택 로직.
-     */
     @Transactional
     public void tryMatch(long categoryId) {
-        // 1) 카테고리별 상담사 후보 SET 조회
-        String key = RedisKeyManager.categoryCounselors(categoryId);
-        Set<Object> ids = redisTemplate.opsForSet().members(key);
+
+        Set<Object> ids = redisTemplate.opsForSet()
+                .members(RedisKeyManager.categoryCounselors(categoryId));
         if (ids == null || ids.isEmpty()) return;
 
         List<CounselorCandidate> candidates = new ArrayList<>();
 
-        // 2) 상태/로드 조회 후 필터링
+        // 후보 필터링
         for (Object rawId : ids) {
-            long counselorId = Long.parseLong(rawId.toString());
+            long id = Long.parseLong(rawId.toString());
 
-            String statusKey = RedisKeyManager.counselorStatus(counselorId);
-            String loadKey = RedisKeyManager.counselorLoad(counselorId);
-            String lastFinishedKey = RedisKeyManager.counselorLastFinished(counselorId);
+            String status = (String) redisTemplate.opsForValue()
+                    .get(RedisKeyManager.counselorStatus(id));
 
-            Object statusObj = redisTemplate.opsForValue().get(statusKey);
-            Object loadObj = redisTemplate.opsForValue().get(loadKey);
-            Object lastFinishedObj = redisTemplate.opsForValue().get(lastFinishedKey);
+            if (!"ONLINE".equals(status) && !"AFTER_CALL".equals(status)) continue;
 
-            String status = statusObj == null ? "OFFLINE" : statusObj.toString();
-            if (!status.equals("ONLINE") && !status.equals("AFTER_CALL")) {
-                continue;
-            }
+            int load = Integer.parseInt(
+                    Optional.ofNullable(redisTemplate.opsForValue().get(RedisKeyManager.counselorLoad(id)))
+                            .orElse("0").toString()
+            );
 
-            int load = loadObj == null ? 0 : Integer.parseInt(loadObj.toString());
-            long lastFinishedAt = lastFinishedObj == null
-                    ? 0L
-                    : Long.parseLong(lastFinishedObj.toString());
+            long lastFinished = Long.parseLong(
+                    Optional.ofNullable(redisTemplate.opsForValue().get(RedisKeyManager.counselorLastFinished(id)))
+                            .orElse("0").toString()
+            );
 
-            candidates.add(new CounselorCandidate(counselorId, load, lastFinishedAt));
+            candidates.add(new CounselorCandidate(id, load, lastFinished));
         }
 
-        if (candidates.isEmpty()) {
-            return;
-        }
+        if (candidates.isEmpty()) return;
 
-        // 3) load → lastFinishedAt 기준 정렬
-        candidates.sort((a, b) -> {
-            if (a.load != b.load) return Integer.compare(a.load, b.load);
-            return Long.compare(a.lastFinishedAt, b.lastFinishedAt);
-        });
+        candidates.sort(Comparator.comparingInt(CounselorCandidate::load)
+                .thenComparingLong(CounselorCandidate::lastFinishedAt));
 
         CounselorCandidate selected = candidates.get(0);
 
-        // 4) 대기열에서 세션 POP
-        String queueKey = RedisKeyManager.categoryQueue(categoryId);
-        Object sessionIdObj = redisTemplate.opsForList().leftPop(queueKey);
-        if (sessionIdObj == null) {
-            // 대기열이 비어 있으면 할 일 없음
-            return;
-        }
-        String sessionId = sessionIdObj.toString();
+        // Queue pop
+        Object sidObj = redisTemplate.opsForList()
+                .leftPop(RedisKeyManager.categoryQueue(categoryId));
+        if (sidObj == null) return;
 
-        // 5) DB 반영 (세션 배정)
+        Long sessionId = Long.parseLong(sidObj.toString());
+
+        // DB 반영
         chatSessionRepository.assignCounselor(sessionId, selected.counselorId);
 
-        // 6) Redis 상태 업데이트
-        String loadKey = RedisKeyManager.counselorLoad(selected.counselorId);
-        String statusKey = RedisKeyManager.counselorStatus(selected.counselorId);
-        redisTemplate.opsForValue().increment(loadKey, 1);
-        redisTemplate.opsForValue().set(statusKey, "BUSY");
+        // Redis 업데이트
+        redisTemplate.opsForValue().increment(RedisKeyManager.counselorLoad(selected.counselorId), 1);
+        redisTemplate.opsForValue().set(RedisKeyManager.counselorStatus(selected.counselorId), "BUSY");
 
-        String sessionStatusKey = RedisKeyManager.sessionStatus(sessionId);
-        String sessionCounselorKey = RedisKeyManager.sessionCounselor(sessionId);
-        redisTemplate.opsForValue().set(sessionStatusKey, "IN_PROGRESS");
-        redisTemplate.opsForValue().set(sessionCounselorKey, String.valueOf(selected.counselorId));
+        redisTemplate.opsForValue().set(RedisKeyManager.sessionStatus(sessionId), "IN_PROGRESS");
+        redisTemplate.opsForValue().set(RedisKeyManager.sessionCounselor(sessionId), selected.counselorId);
 
-        // 7) Pub/Sub 통해 WebSocket으로 배정 이벤트 날리기
-        MatchingAssignedMessage message = new MatchingAssignedMessage(
-                "ASSIGNED",
-                sessionId,
-                selected.counselorId
+        // Pub/Sub
+        redisTemplate.convertAndSend(
+                RedisKeyManager.wsChannel(sessionId),
+                new MatchingAssignedMessage("ASSIGNED", sessionId, selected.counselorId)
         );
-        redisTemplate.convertAndSend(RedisKeyManager.wsChannel(sessionId), message);
     }
 
-    public void markSessionFinished(String sessionId, long counselorId) {
-        // 세션 종료 시 load 감소 + lastFinishedAt 갱신
-        String loadKey = RedisKeyManager.counselorLoad(counselorId);
-        String statusKey = RedisKeyManager.counselorStatus(counselorId);
-        String lastFinishedKey = RedisKeyManager.counselorLastFinished(counselorId);
-
-        redisTemplate.opsForValue().increment(loadKey, -1);
-        redisTemplate.opsForValue().set(lastFinishedKey, String.valueOf(Instant.now().toEpochMilli()));
-        redisTemplate.opsForValue().set(statusKey, "AFTER_CALL");
+    public void markSessionFinished(Long sessionId, long counselorId) {
+        redisTemplate.opsForValue().increment(RedisKeyManager.counselorLoad(counselorId), -1);
+        redisTemplate.opsForValue().set(RedisKeyManager.counselorLastFinished(counselorId),
+                String.valueOf(Instant.now().toEpochMilli()));
+        redisTemplate.opsForValue().set(RedisKeyManager.counselorStatus(counselorId), "AFTER_CALL");
     }
 
     private record CounselorCandidate(long counselorId, int load, long lastFinishedAt) {}
-
-    public record MatchingAssignedMessage(
-            String type,
-            String sessionId,
-            long counselorId
-    ) {}
+    public record MatchingAssignedMessage(String type, Long sessionId, long counselorId) {}
 }

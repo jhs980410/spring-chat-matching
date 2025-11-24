@@ -13,9 +13,9 @@ public class CounselRequestController {
     private final WaitingRequestService waitingRequestService;
 
     @PostMapping("/request")
-    public ResponseEntity<String> request(@RequestBody CounselRequestDto dto) {
+    public ResponseEntity<Long> request(@RequestBody CounselRequestDto dto) {
         // 세션 ID 생성은 UUID, DB insert 등 구현 선택
-        String sessionId = waitingRequestService.enqueue(dto);
+        long sessionId = waitingRequestService.enqueue(dto);
         return ResponseEntity.ok(sessionId);
     }
 }

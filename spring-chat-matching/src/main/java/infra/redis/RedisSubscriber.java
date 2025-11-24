@@ -2,27 +2,30 @@ package infra.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class RedisSubscriber {
+public class RedisSubscriber implements MessageListener {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * RedisMessageListenerAdapter 가 문자열 payload를 넘겨줄 때 사용하는 메서드
+     * Redis Pub/Sub → STOMP 전송
      */
-    public void onMessage(String message, String channel) {
+    @Override
+    public void onMessage(Message message, byte[] pattern) {
         try {
-            // message를 WSMessage로 변환
-            WSMessage payload = objectMapper.readValue(message, WSMessage.class);
+            String json = new String(message.getBody());
+            WSMessage payload = objectMapper.readValue(json, WSMessage.class);
 
-            // 세션 구독 경로로 전달
             String dest = "/sub/session/" + payload.getSessionId();
             messagingTemplate.convertAndSend(dest, payload);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

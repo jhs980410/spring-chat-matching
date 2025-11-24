@@ -14,8 +14,7 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
     private final ChatSessionJpaRepository jpaRepository;
 
     @Override
-    public ChatSession createWaitingSession(String sessionId, Long userId, Long categoryId) {
-
+    public ChatSession createWaitingSession(Long userId, Long categoryId) {
         ChatSession session = ChatSession.builder()
                 .userId(userId)
                 .categoryId(categoryId)
@@ -28,10 +27,8 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
     }
 
     @Override
-    public void assignCounselor(String sessionId, long counselorId) {
-        Long id = Long.parseLong(sessionId);
-
-        ChatSession session = jpaRepository.findById(id)
+    public void assignCounselor(Long sessionId, long counselorId) {
+        ChatSession session = jpaRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
 
         session.setCounselorId(counselorId);

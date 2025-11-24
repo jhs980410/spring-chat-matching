@@ -1,14 +1,13 @@
 package domain.counselor.service;
 
-
+import domain.chat.entity.ChatSession;
 import domain.chat.repository.ChatSessionRepository;
+import domain.chat.service.MatchingService;
 import domain.counselor.dto.CounselRequestDto;
 import infra.redis.RedisKeyManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -16,22 +15,28 @@ public class WaitingRequestService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final ChatSessionRepository chatSessionRepository;
+    private final MatchingService matchingService;
 
-    public String enqueue(CounselRequestDto dto) {
+    public Long enqueue(CounselRequestDto dto) {
+
         Long categoryId = dto.categoryId();
+        Long userId = dto.userId();
 
-        // 세션 ID 생성 (DB PK를 쓰거나, UUID를 쓰거나 자유)
-        String sessionId = UUID.randomUUID().toString();
+        // DB WAITING 세션 생성
+        ChatSession session = chatSessionRepository.createWaitingSession(userId, categoryId);
+        Long sessionId = session.getId();
 
-        // DB에 WAITING 상태 세션 생성 (필요시)
-        chatSessionRepository.createWaitingSession(sessionId, dto.userId(), categoryId);
+        // Redis Queue push
+        redisTemplate.opsForList()
+                .rightPush(RedisKeyManager.categoryQueue(categoryId), sessionId.toString());
 
-        // Redis 대기열에 push
-        String queueKey = RedisKeyManager.categoryQueue(categoryId);
-        redisTemplate.opsForList().rightPush(queueKey, sessionId);
-
-        // 세션 상태도 Redis에 적재
+        // 세션 메타데이터 적재
         redisTemplate.opsForValue().set(RedisKeyManager.sessionStatus(sessionId), "WAITING");
+        redisTemplate.opsForValue().set(RedisKeyManager.sessionUser(sessionId), userId);
+        redisTemplate.opsForValue().set(RedisKeyManager.sessionCategory(sessionId), categoryId);
+
+        // 매칭 시도
+        matchingService.tryMatch(categoryId);
 
         return sessionId;
     }
