@@ -34,7 +34,13 @@ dependencies {
     // --- Lombok ---
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-
+    // -----------------------------
+    // 🔥 JWT (JJWT 0.12.x 최신버전)
+    // -----------------------------
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'  // JSON 직렬화
+    runtimeOnly 'io.jsonwebtoken:jjwt-orgjson:0.12.5'  // RSA 서명 지원
     // --- MySQL ---
     runtimeOnly 'com.mysql:mysql-connector-j'
 
