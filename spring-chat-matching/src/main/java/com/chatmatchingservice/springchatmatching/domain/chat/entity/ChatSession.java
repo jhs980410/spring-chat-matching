@@ -23,11 +23,16 @@ public class ChatSession {
     private Long categoryId;
 
     @Enumerated(EnumType.STRING)
-    private SessionStatus status;  // WAITING / IN_PROGRESS / CLOSED
+    private SessionStatus status;  // WAITING / IN_PROGRESS / AFTER_CALL / ENDED
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // 🔥 추가: DB 스키마에 존재하는 started_at 컬럼
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    // --- 생성 메서드 ---
     public static ChatSession createWaiting(Long userId, Long categoryId) {
         return ChatSession.builder()
                 .userId(userId)
@@ -38,9 +43,11 @@ public class ChatSession {
                 .build();
     }
 
+    // --- 상담사 배정 ---
     public void assignCounselor(Long counselorId) {
         this.counselorId = counselorId;
         this.status = SessionStatus.IN_PROGRESS;
+        this.startedAt = LocalDateTime.now();  //  상담 시작 시간 기록
         this.updatedAt = LocalDateTime.now();
     }
 }

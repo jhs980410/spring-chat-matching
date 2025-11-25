@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -52,6 +53,21 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
     @Override
     public Optional<ChatSession> findById(Long sessionId) {
         return jpaRepository.findById(sessionId);
+    }
+    @Override
+    public Optional<ChatSession> findActiveSessionByUser(Long userId) {
+        return jpaRepository.findTopByUserIdAndStatusIn(
+                userId,
+                List.of(SessionStatus.WAITING, SessionStatus.IN_PROGRESS)
+        );
+    }
+
+    @Override
+    public Optional<ChatSession> findActiveSessionByCounselor(Long counselorId) {
+        return jpaRepository.findTopByCounselorIdAndStatusIn(
+                counselorId,
+                List.of(SessionStatus.IN_PROGRESS, SessionStatus.AFTER_CALL)
+        );
     }
 
 }

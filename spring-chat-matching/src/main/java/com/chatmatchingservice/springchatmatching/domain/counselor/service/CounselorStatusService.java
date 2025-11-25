@@ -5,10 +5,11 @@ import com.chatmatchingservice.springchatmatching.domain.counselor.dto.Counselor
 import com.chatmatchingservice.springchatmatching.domain.counselor.entity.CounselorStatus;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CounselorStatusService {
@@ -69,4 +70,29 @@ public class CounselorStatusService {
                 matchingService.tryMatch(categoryId);
         }
     }
+
+    @Transactional
+    public void setAfterCall(Long counselorId) {
+
+        // Redis: 상담사 상태를 AFTER_CALL로 설정
+        redisTemplate.opsForValue().set(
+                RedisKeyManager.counselorStatus(counselorId),
+                "AFTER_CALL"
+        );
+
+        // Load 감소(선택)
+        redisTemplate.opsForValue().increment(
+                RedisKeyManager.counselorLoad(counselorId),
+                -1
+        );
+
+        // 최근 종료 시간 기록
+        redisTemplate.opsForValue().set(
+                RedisKeyManager.counselorLastFinished(counselorId),
+                String.valueOf(System.currentTimeMillis())
+        );
+
+        log.info("[Service] Counselor AFTER_CALL: counselorId={}", counselorId);
+    }
+
 }
