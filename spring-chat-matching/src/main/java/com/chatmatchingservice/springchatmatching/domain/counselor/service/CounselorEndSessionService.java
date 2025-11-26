@@ -1,19 +1,21 @@
-package com.chatmatchingservice.springchatmatching.domain.chat.service.end;
+package com.chatmatchingservice.springchatmatching.domain.counselor.service;
 
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatSessionRepository;
+import com.chatmatchingservice.springchatmatching.domain.chat.service.end.EndSessionService;
+import com.chatmatchingservice.springchatmatching.domain.chat.service.end.EndSessionTemplate;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * 사용자 종료(USER) 시나리오 템플릿 구현
+ * 상담사 종료(COUNSELOR) 시나리오 템플릿 구현
  */
 @Service
 @Slf4j
-public class UserEndSessionService extends EndSessionTemplate implements EndSessionService {
+public class CounselorEndSessionService extends EndSessionTemplate implements EndSessionService {
 
-    public UserEndSessionService(ChatSessionRepository sessionRepository,
-                                 RedisRepository redisRepository) {
+    public CounselorEndSessionService(ChatSessionRepository sessionRepository,
+                                      RedisRepository redisRepository) {
         super(sessionRepository, redisRepository);
     }
 
@@ -23,7 +25,7 @@ public class UserEndSessionService extends EndSessionTemplate implements EndSess
      */
     @Override
     protected void saveLog(Long sessionId, Long counselorId) {
-        log.info("[EndSession][USER] counsel_log 저장: sessionId={}, counselorId={}",
+        log.info("[EndSession][COUNSELOR] counsel_log 저장: sessionId={}, counselorId={}",
                 sessionId, counselorId);
     }
 

@@ -123,6 +123,19 @@ public class RedisRepositoryImpl implements RedisRepository {
                 .range(RedisKeyManager.categoryQueue(categoryId), 0, -1);
     }
 
+    @Override
+    public void removeFromQueue(Long categoryId, Long sessionId) {
+        try {
+            redisTemplate.opsForList().remove(
+                    RedisKeyManager.categoryQueue(categoryId),
+                    0,                                 // 모든 위치에서 제거
+                    String.valueOf(sessionId)          // enqueue 시 toString() 했으므로 동일하게
+            );
+        } catch (Exception e) {
+            log.error("[RedisRepo] removeFromQueue 실패: categoryId={}, sessionId={}", categoryId, sessionId, e);
+        }
+    }
+
 
     // ==========================================
     // 세션 정보
@@ -170,9 +183,25 @@ public class RedisRepositoryImpl implements RedisRepository {
         Object v = redisTemplate.opsForValue().get(RedisKeyManager.sessionCategory(sessionId));
         return v != null ? Long.valueOf(v.toString()) : null;
     }
+
+    @Override
+    public void deleteSessionKeys(Long sessionId) {
+        try {
+            redisTemplate.delete(RedisKeyManager.sessionStatus(sessionId));
+            redisTemplate.delete(RedisKeyManager.sessionUser(sessionId));
+            redisTemplate.delete(RedisKeyManager.sessionCounselor(sessionId));
+            redisTemplate.delete(RedisKeyManager.sessionCategory(sessionId));
+            // 필요하면 메시지 리스트, 기타 키도 여기에서 함께 삭제
+            // redisTemplate.delete(RedisKeyManager.sessionMessages(sessionId));
+        } catch (Exception e) {
+            log.error("[RedisRepo] deleteSessionKeys 실패: sessionId={}", sessionId, e);
+        }
+    }
+
+
     // ==========================================
-// WAITING 세션 조회 (userId 기준)
-// ==========================================
+    // WAITING 세션 조회 (userId 기준)
+    // ==========================================
     @Override
     public Long findWaitingSessionByUser(Long userId) {
         Set<String> keys = redisTemplate.keys("session:*:userId");
@@ -184,14 +213,11 @@ public class RedisRepositoryImpl implements RedisRepository {
             Object val = redisTemplate.opsForValue().get(key);
             if (val == null) continue;
 
-            // userId 매칭 확인
             if (!userStr.equals(val.toString())) continue;
 
-            // sessionId 추출
             Long sessionId = extractSessionId(key);
             if (sessionId == null) continue;
 
-            // WAITING 상태인지 확인
             String status = getSessionStatus(sessionId);
             if ("WAITING".equals(status)) {
                 return sessionId;
@@ -203,8 +229,7 @@ public class RedisRepositoryImpl implements RedisRepository {
 
     private Long extractSessionId(String key) {
         try {
-            // key 형식: session:{id}:userId
-            String[] parts = key.split(":");
+            String[] parts = key.split(":"); // session:{id}:userId
             return Long.valueOf(parts[1]);
         } catch (Exception e) {
             log.warn("[RedisRepo] sessionId 파싱 실패: key={}", key);
@@ -213,13 +238,14 @@ public class RedisRepositoryImpl implements RedisRepository {
     }
 
 
+    // ==========================================
+    // WebSocket Channel Pub/Sub
+    // ==========================================
     @Override
     public String wsChannel(Long sessionId) {
         return "ws:session:" + sessionId;
     }
-    // ==========================================
-    // WebSocket Channel Pub/Sub
-    // ==========================================
+
     @Override
     public void publishToWsChannel(Long sessionId, Object message) {
         redisTemplate.convertAndSend(

@@ -1,5 +1,7 @@
 package com.chatmatchingservice.springchatmatching.infra.redis;
 
+import com.chatmatchingservice.springchatmatching.domain.chat.service.message.MessageHandler;
+import com.chatmatchingservice.springchatmatching.domain.chat.websocket.MessageFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class RedisSubscriber implements MessageListener {
 
+    private final MessageFactory messageFactory;       //  추가
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
@@ -30,6 +33,15 @@ public class RedisSubscriber implements MessageListener {
             String json = new String(message.getBody(), StandardCharsets.UTF_8);
             WSMessage payload = objectMapper.readValue(json, WSMessage.class);
 
+            // ⭐ 내부 로직 처리 (핸들러 패턴)
+            try {
+                MessageHandler handler = messageFactory.getHandler(payload);
+                handler.handle(payload);
+            } catch (Exception e) {
+                log.error("[WS][Subscriber] Handler 처리 실패: {}", e.getMessage());
+            }
+
+            // 기존 STOMP 브로드캐스트
             String dest = "/sub/session/" + payload.getSessionId();
             messagingTemplate.convertAndSend(dest, payload);
 

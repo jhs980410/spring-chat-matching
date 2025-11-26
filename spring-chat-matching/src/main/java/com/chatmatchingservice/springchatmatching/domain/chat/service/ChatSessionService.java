@@ -83,8 +83,13 @@ public class ChatSessionService {
         validateNotFinished(session);
 
         // DB 처리 + Redis 처리
-        endSessionFacade.endByUser(sessionId, session.getCounselorId());
-
+        if (actorId.equals(session.getUserId())) {
+            // 사용자 종료
+            endSessionFacade.endByUser(sessionId, session.getUserId());
+        } else {
+            // 상담사 종료
+            endSessionFacade.endByCounselor(sessionId, session.getCounselorId());
+        }
         // WebSocket 알림
         eventService.sendEnd(sessionId, session.getCounselorId());
 
@@ -200,4 +205,6 @@ public class ChatSessionService {
             throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
         }
     }
+
+
 }

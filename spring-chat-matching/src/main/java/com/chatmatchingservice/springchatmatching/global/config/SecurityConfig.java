@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -19,35 +21,58 @@ public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtUserDetailsService jwtUserDetailsService;
-    private final JwtAccessDeniedHandler accessDeniedHandler;           // 403
-    private final JwtAuthenticationEntryPoint authenticationEntryPoint; // 401
+    private final JwtAccessDeniedHandler accessDeniedHandler;
+    private final JwtAuthenticationEntryPoint authenticationEntryPoint;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // 기본 설정
+                // 기본 보안 설정
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // 예외 처리
+                // 인증 & 인가 예외 처리
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint)  // 401
                         .accessDeniedHandler(accessDeniedHandler)            // 403
                 )
 
-                // 권한 규칙 설정
+                // 허용 경로 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()    // 로그인/회원가입
-                        .requestMatchers("/ws/**").permitAll()          // WebSocket 핸드셰이크는 허용
+                        // Auth API는 모두 허용
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // WebSocket 핸드셰이크 허용
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/ws/connect").permitAll()
+
+                        // Swagger 허용
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/swagger-resources",
+                                "/webjars/**"
+                        ).permitAll()
+
+                        // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
 
-                // JWT 필터
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
-                        UsernamePasswordAuthenticationFilter.class);
+                // JWT 필터 등록
+                .addFilterBefore(
+                        new JwtAuthenticationFilter(jwtTokenProvider),
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }

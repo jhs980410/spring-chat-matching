@@ -30,6 +30,8 @@ dependencies {
 
     // --- Jackson ---
     implementation 'com.fasterxml.jackson.core:jackson-databind'
+    //Swagger3
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
     // --- Lombok ---
     compileOnly 'org.projectlombok:lombok'

@@ -1,6 +1,5 @@
 package com.chatmatchingservice.springchatmatching.domain.chat.controller;
 
-import com.chatmatchingservice.springchatmatching.domain.chat.dto.ChatMessageResponse;
 import com.chatmatchingservice.springchatmatching.domain.chat.service.ChatSessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,4 +32,5 @@ public class ChatMessageController {
                 chatSessionService.getMessages(sessionId, actorId)
         );
     }
+
 }

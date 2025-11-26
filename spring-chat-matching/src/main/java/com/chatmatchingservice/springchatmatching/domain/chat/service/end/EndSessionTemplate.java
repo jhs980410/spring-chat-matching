@@ -14,7 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 public abstract class EndSessionTemplate {
 
     protected final ChatSessionRepository sessionRepository;
-    protected final RedisRepository redisRepository;   //  변경됨
+    protected final RedisRepository redisRepository;
 
     /**
      * Template Method
@@ -34,10 +34,13 @@ public abstract class EndSessionTemplate {
             // 4) 상담사 AFTER_CALL 처리
             markAfterCall(counselorId);
 
-            // 5) 로그 저장 (자식 클래스 구현)
+            // 5) Redis 세션 키 정리 + WS 이벤트 발행
+            cleanupSessionKeys(sessionId, counselorId, session.getUserId());
+
+            // 6) 로그 저장 (자식 클래스 구현)
             saveLog(sessionId, counselorId);
 
-            // 6) 후처리 훅(옵션)
+            // 7) 후처리 훅(옵션)
             afterHook(sessionId, counselorId);
 
             log.info("[EndSession] 종료 처리 완료: sessionId={}, counselorId={}",
@@ -80,8 +83,8 @@ public abstract class EndSessionTemplate {
      */
     protected void updateSessionStatus(Long sessionId) {
         try {
-            sessionRepository.endSession(sessionId);  // DB: 상태 ENDED
-            redisRepository.setSessionStatus(sessionId, "ENDED");   //  변경됨
+            sessionRepository.endSession(sessionId);              // DB: 상태 ENDED
+            redisRepository.setSessionStatus(sessionId, "ENDED"); // Redis
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -93,7 +96,7 @@ public abstract class EndSessionTemplate {
      */
     protected void decreaseLoad(Long counselorId) {
         try {
-            redisRepository.incrementCounselorLoad(counselorId, -1);   //  변경됨
+            redisRepository.incrementCounselorLoad(counselorId, -1);
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -105,10 +108,10 @@ public abstract class EndSessionTemplate {
      */
     protected void markAfterCall(Long counselorId) {
         try {
-            redisRepository.setCounselorStatus(counselorId, "AFTER_CALL");  //  변경됨
+            redisRepository.setCounselorStatus(counselorId, "AFTER_CALL");
             redisRepository.setCounselorLastFinished(
                     counselorId,
-                    System.currentTimeMillis()                               //  변경됨
+                    System.currentTimeMillis()
             );
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -117,13 +120,39 @@ public abstract class EndSessionTemplate {
 
 
     /**
-     * 5) 로그 저장 (자식 클래스가 직접 구현)
+     * 5) Redis 세션 데이터 완전 정리 + WebSocket 종료 이벤트 발행
+     */
+    protected void cleanupSessionKeys(Long sessionId, Long counselorId, Long userId) {
+        try {
+            Long categoryId = redisRepository.getSessionCategory(sessionId);
+
+            // 5-1. WebSocket 종료 이벤트 발행
+            SessionEndEvent event = SessionEndEvent.of(sessionId, counselorId, userId);
+            redisRepository.publishToWsChannel(sessionId, event);
+
+            // 5-2. 대기열에서 해당 세션 제거 (매칭 중 취소/종료 대비)
+            if (categoryId != null) {
+                redisRepository.removeFromQueue(categoryId, sessionId);
+            }
+
+            // 5-3. 세션 관련 Redis 키 전체 삭제
+            redisRepository.deleteSessionKeys(sessionId);
+
+        } catch (Exception e) {
+            log.error("[EndSession] Redis 정리 중 오류: sessionId={}, counselorId={}",
+                    sessionId, counselorId, e);
+        }
+    }
+
+
+    /**
+     * 6) 로그 저장 (자식 클래스가 직접 구현)
      */
     protected abstract void saveLog(Long sessionId, Long counselorId);
 
 
     /**
-     * 6) 후처리 훅 (선택)
+     * 7) 후처리 훅 (선택)
      */
     protected void afterHook(Long sessionId, Long counselorId) {
         // optional

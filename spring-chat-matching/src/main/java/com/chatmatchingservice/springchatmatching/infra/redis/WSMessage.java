@@ -17,4 +17,6 @@ public class WSMessage {
     private Long senderId;
     private String message;
     private Long timestamp;
+
+
 }
