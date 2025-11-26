@@ -1,6 +1,8 @@
 package com.chatmatchingservice.springchatmatching.domain.chat.service.matching;
 
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatSessionRepository;
+import com.chatmatchingservice.springchatmatching.domain.chat.websocket.MessageFactory;   // 🔥 추가됨
+import com.chatmatchingservice.springchatmatching.domain.chat.service.message.MessageHandler; // 🔥 추가됨
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
 import lombok.RequiredArgsConstructor;
@@ -15,15 +17,6 @@ import java.util.*;
 
 /**
  * 상담사 매칭 서비스
- *
- * - Redis 기반으로 상담사 후보를 조회하고
- * - load, lastFinishedAt 기준으로 우선순위 결정
- * - 대기열에서 세션을 꺼내 매칭
- * - DB 및 Redis 상태 반영
- *
- * Strategy 패턴:
- *  - 매칭 알고리즘(정렬 기준)을 별도 전략으로 분리해두어
- *    향후 load 우선, 점수 우선, AI 점수 기반 등으로 교체 가능
  */
 @Service
 @RequiredArgsConstructor
@@ -33,9 +26,10 @@ public class MatchingService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ChatSessionRepository chatSessionRepository;
 
+    private final MessageFactory messageFactory;  // 🔥 새롭게 추가된 의존성
+
     /**
-     * 매칭 알고리즘 전략 인터페이스 (Strategy 패턴)
-     * -> 현재는 기본 구현(Load 우선)만 사용하지만, 추후 다른 정책을 쉽게 추가 가능
+     * 매칭 알고리즘 전략 인터페이스
      */
     @FunctionalInterface
     public interface MatchingAlgorithm {
@@ -43,7 +37,7 @@ public class MatchingService {
     }
 
     /**
-     * 기본 전략 구현: load → lastFinishedAt 기준으로 정렬해서 최소값 선택
+     * 기본 전략 구현 (load → lastFinishedAt)
      */
     private final MatchingAlgorithm matchingAlgorithm = candidates -> {
         if (candidates == null || candidates.isEmpty()) return null;
@@ -57,42 +51,29 @@ public class MatchingService {
 
     /**
      * 카테고리별 매칭 시도
-     *
-     * 1) categoryCounselors Set에서 상담사 ID 목록 조회
-     * 2) ONLINE / AFTER_CALL 상태만 후보로 필터링
-     * 3) load / lastFinishedAt 기준 전략(Strategy)으로 상담사 1명 선택
-     * 4) queue:category:{id} 리스트에서 sessionId pop
-     * 5) DB의 chat_session에 counselor 배정
-     * 6) Redis 상태 업데이트 (load, status, session 메타)
-     * 7) Pub/Sub으로 ASSIGNED 이벤트 전송
      */
     @Transactional
     public void tryMatch(long categoryId) {
 
         try {
-            // 1) 카테고리별 상담사 Set 조회
+            // 1) 카테고리 상담사 Set 조회
             Set<Object> ids = redisTemplate.opsForSet()
                     .members(RedisKeyManager.categoryCounselors(categoryId));
 
             if (ids == null || ids.isEmpty()) {
-                log.debug("[Matching] categoryId={} 상담사 Set 비어 있음", categoryId);
+                log.debug("[Matching] categoryId={} 상담사 없음", categoryId);
                 return;
             }
 
             List<CounselorCandidate> candidates = new ArrayList<>();
 
-            // 2) 후보 필터링 (ONLINE / AFTER_CALL 상태만)
+            // 2) ONLINE / AFTER_CALL 상담사만 선택
             for (Object rawId : ids) {
                 Long id = parseLongOrNull(rawId);
-                if (id == null) {
-                    log.warn("[Matching] 잘못된 counselor id 값: {}", rawId);
-                    continue;
-                }
+                if (id == null) continue;
 
                 String status = getStringSafely(RedisKeyManager.counselorStatus(id));
-                if (!"ONLINE".equals(status) && !"AFTER_CALL".equals(status)) {
-                    continue;
-                }
+                if (!"ONLINE".equals(status) && !"AFTER_CALL".equals(status)) continue;
 
                 int load = getIntSafely(RedisKeyManager.counselorLoad(id), 0);
                 long lastFinished = getLongSafely(RedisKeyManager.counselorLastFinished(id), 0L);
@@ -101,18 +82,15 @@ public class MatchingService {
             }
 
             if (candidates.isEmpty()) {
-                log.debug("[Matching] categoryId={} 조건 만족하는 상담사 없음", categoryId);
+                log.debug("[Matching] categoryId={} 매칭 가능 상담사 없음", categoryId);
                 return;
             }
 
-            // 3) Strategy 패턴으로 상담사 1명 선택
+            // 3) Strategy 패턴으로 상담사 선택
             CounselorCandidate selected = matchingAlgorithm.select(candidates);
-            if (selected == null) {
-                log.debug("[Matching] categoryId={} 선택된 상담사 없음", categoryId);
-                return;
-            }
+            if (selected == null) return;
 
-            // 4) 카테고리 대기열에서 세션 pop
+            // 4) 대기열에서 session pop
             Object sidObj = redisTemplate.opsForList()
                     .leftPop(RedisKeyManager.categoryQueue(categoryId));
 
@@ -122,18 +100,13 @@ public class MatchingService {
             }
 
             Long sessionId = parseLongOrNull(sidObj);
-            if (sessionId == null) {
-                log.warn("[Matching] 잘못된 sessionId 값: {}", sidObj);
-                return;
-            }
+            if (sessionId == null) return;
 
-            // 5) DB 반영 (세션에 상담사 배정)
+            // 5) DB 반영
             try {
                 chatSessionRepository.assignCounselor(sessionId, selected.counselorId());
             } catch (DataAccessException e) {
-                log.error("[Matching] DB assignCounselor 실패: sessionId={}, counselorId={}",
-                        sessionId, selected.counselorId(), e);
-                // DB 반영 실패 시 Redis 상태를 건드리지 않고 종료
+                log.error("[Matching] DB assignCounselor 실패", e);
                 return;
             }
 
@@ -148,7 +121,10 @@ public class MatchingService {
             redisTemplate.opsForValue()
                     .set(RedisKeyManager.sessionCounselor(sessionId), selected.counselorId());
 
-            // 7) Pub/Sub: ASSIGNED 이벤트 전송
+            // --------------------------------------------------------------
+            // 7) Pub/Sub → ASSIGNED 메시지를 Handler를 통해 보내도록 변경
+            // --------------------------------------------------------------
+
             WSMessage assigned = new WSMessage(
                     "ASSIGNED",
                     String.valueOf(sessionId),
@@ -157,20 +133,23 @@ public class MatchingService {
                     "상담사가 배정되었습니다.",
                     Instant.now().toEpochMilli()
             );
-            String channel = RedisKeyManager.wsChannel(sessionId);
-            redisTemplate.convertAndSend(channel, assigned);
 
-            log.info("[Matching] 매칭 성공: categoryId={}, sessionId={}, counselorId={}, load={}",
-                    categoryId, sessionId, selected.counselorId(), selected.load());
+            // 🔥 MessageFactory로 handler 조회
+            MessageHandler handler = messageFactory.getHandler(assigned);  // 🔥 변경됨
+
+            // 🔥 Handler 실행 → 내부에서 RedisPublisher.publish() 호출됨
+            handler.handle(assigned);  // 🔥 변경됨
+
+            log.info("[Matching] 매칭 성공: categoryId={}, sessionId={}, counselorId={}",
+                    categoryId, sessionId, selected.counselorId());
 
         } catch (Exception e) {
-            log.error("[Matching] tryMatch 중 예외 발생: {}", e.getMessage(), e);
+            log.error("[Matching] tryMatch 중 예외", e);
         }
     }
 
     /**
-     * 상담 종료 후 처리: load 감소, lastFinishedAt 업데이트, AFTER_CALL 상태 설정
-     * (Template Method 패턴의 일부는 EndSessionTemplate에서 처리)
+     * 상담 종료 후 처리
      */
     public void markSessionFinished(Long sessionId, long counselorId) {
         try {
@@ -185,22 +164,17 @@ public class MatchingService {
             redisTemplate.opsForValue()
                     .set(RedisKeyManager.sessionStatus(sessionId), "AFTER_CALL");
 
-            log.info("[Matching] 세션 종료 처리: sessionId={}, counselorId={}",
-                    sessionId, counselorId);
+            log.info("[Matching] sessionId={} 종료 처리 완료", sessionId);
 
         } catch (Exception e) {
-            log.error("[Matching] markSessionFinished 중 예외 발생: {}", e.getMessage(), e);
+            log.error("[Matching] markSessionFinished 예외", e);
         }
     }
 
     // ---- 내부 유틸 메서드 ----
-
     private Long parseLongOrNull(Object value) {
-        try {
-            return value == null ? null : Long.parseLong(value.toString());
-        } catch (NumberFormatException e) {
-            return null;
-        }
+        try { return value == null ? null : Long.parseLong(value.toString()); }
+        catch (NumberFormatException e) { return null; }
     }
 
     private String getStringSafely(String key) {
@@ -211,26 +185,21 @@ public class MatchingService {
     private int getIntSafely(String key, int defaultValue) {
         Object v = redisTemplate.opsForValue().get(key);
         if (v == null) return defaultValue;
-        try {
-            return Integer.parseInt(v.toString());
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
+        try { return Integer.parseInt(v.toString()); }
+        catch (NumberFormatException e) { return defaultValue; }
     }
 
     private long getLongSafely(String key, long defaultValue) {
         Object v = redisTemplate.opsForValue().get(key);
         if (v == null) return defaultValue;
-        try {
-            return Long.parseLong(v.toString());
-        } catch (NumberFormatException e) {
-            return defaultValue;
-        }
+        try { return Long.parseLong(v.toString()); }
+        catch (NumberFormatException e) { return defaultValue; }
     }
 
     /**
      * 상담사 후보 정보를 담는 내부 record
      */
     private record CounselorCandidate(long counselorId, int load, long lastFinishedAt) {}
+
     public record MatchingAssignedMessage(String type, Long sessionId, long counselorId) {}
 }

@@ -8,6 +8,8 @@ import com.chatmatchingservice.springchatmatching.domain.chat.entity.SessionStat
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatMessageRepository;
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatSessionRepository;
 import com.chatmatchingservice.springchatmatching.domain.chat.service.end.EndSessionFacade;
+import com.chatmatchingservice.springchatmatching.global.error.CustomException;
+import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,24 +30,25 @@ public class ChatSessionService {
     private final EndSessionFacade endSessionFacade;
     private final ChatMessageRepository chatMessageRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ChatSessionEventService eventService;
+
+    // =========================================================
+    // 1. 현재 진행 중인 세션 조회
+    // =========================================================
     public SessionInfoResponse getSessionOfUserOrCounselor(Long id) {
 
-        // 1) 유저 기준 먼저 찾기
         Optional<ChatSession> userSession =
                 chatSessionRepository.findActiveSessionByUser(id);
 
         if (userSession.isPresent()) {
-            ChatSession s = userSession.get();
-            return toResponse(s);
+            return toResponse(userSession.get());
         }
 
-        // 2) 상담사 기준
         Optional<ChatSession> counselorSession =
                 chatSessionRepository.findActiveSessionByCounselor(id);
 
         if (counselorSession.isPresent()) {
-            ChatSession s = counselorSession.get();
-            return toResponse(s);
+            return toResponse(counselorSession.get());
         }
 
         return new SessionInfoResponse(null, "NONE", null, null, null, null);
@@ -68,50 +71,52 @@ public class ChatSessionService {
         );
     }
 
-    /**
-     * 세션 종료 API 핵심 로직 (컨트롤러에서 호출)
-     */
+    // =========================================================
+    // 2. 세션 종료(END)
+    // =========================================================
     @Transactional
     public void endSession(Long sessionId, Long actorId, String reason) {
 
-        // 1) 세션 존재 여부 확인
         ChatSession session = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        // 2) 종료 권한 확인
-        if (!actorId.equals(session.getUserId()) &&
-                !actorId.equals(session.getCounselorId())) {
-            throw new SecurityException("이 세션을 종료할 권한이 없습니다.");
-        }
+        // 권한 체크
+        validateAccess(session, actorId);
 
-        // 3) 종료 처리 (Facade로 위임)
+        // 이미 종료된 상태 확인
+        validateNotFinished(session);
+
+        // DB 처리
         endSessionFacade.endByUser(sessionId, session.getCounselorId());
+
+        // WebSocket 알림
+        eventService.sendEnd(sessionId, session.getCounselorId());
+
+        log.info("[Service] Session END: sessionId={}, by actorId={}", sessionId, actorId);
     }
+
+    // =========================================================
+    // 3. 메시지 조회
+    // =========================================================
     @Transactional(readOnly = true)
     public ChatSession getAndValidateSession(Long sessionId, Long actorId) {
-        ChatSession s = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
 
-        // 접근 권한 검사 (userId or counselorId 중 하나여야 함)
-        if (!actorId.equals(s.getUserId()) &&
-                !actorId.equals(s.getCounselorId())) {
-            throw new SecurityException("세션 접근 권한이 없습니다.");
-        }
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        return s;
+        validateAccess(session, actorId);
+
+        return session;
     }
-    /** 메시지 조회 */
+
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getMessages(Long sessionId, Long actorId) {
 
-        // 1) 접근 권한 체크
         ChatSession session = getAndValidateSession(sessionId, actorId);
 
-        // 2) 메시지 조회
         List<ChatMessage> messages =
-                chatMessageRepository.findBySessionIdOrderByCreatedAtAsc(session.getId());
+                chatMessageRepository.findBySessionIdOrderByCreatedAtAsc(sessionId);
 
-        // 3) DTO 변환
         return messages.stream()
                 .map(m -> new ChatMessageResponse(
                         m.getId(),
@@ -123,80 +128,86 @@ public class ChatSessionService {
                 .toList();
     }
 
-
-    // =========================
-    // 4. 상담사 측 세션 수락
-    // =========================
-
+    // =========================================================
+    // 4. 상담사 수락(ACCEPT)
+    // =========================================================
     @Transactional
     public void acceptSession(Long sessionId, Long counselorId) {
 
         ChatSession session = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        // 🔹 상담사 권한 확인
+        // 허용된 상담사인지 확인
         if (!counselorId.equals(session.getCounselorId())) {
-            throw new SecurityException("본인의 상담 세션만 수락할 수 있습니다.");
+            throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
         }
 
-        // 🔹 상태 업데이트 (JPA 더티 체킹으로 반영 → save() 안 써도 됨)
+        // 종료 상태인지 확인
+        validateNotFinished(session);
+
+        // 상태 업데이트
         session.setStatus(SessionStatus.IN_PROGRESS);
         session.setStartedAt(LocalDateTime.now());
 
-        // 🔹 Redis 상태도 보정
-        redisTemplate.opsForValue().set(
-                RedisKeyManager.sessionStatus(sessionId), "IN_PROGRESS"
-        );
+        // Redis 반영
+        redisTemplate.opsForValue().set(RedisKeyManager.sessionStatus(sessionId), "IN_PROGRESS");
+        redisTemplate.opsForValue().set(RedisKeyManager.counselorStatus(counselorId), "BUSY");
 
-        redisTemplate.opsForValue().set(
-                RedisKeyManager.counselorStatus(counselorId), "BUSY"
-        );
+        // WebSocket
+        eventService.sendAccept(sessionId, counselorId);
 
-        // load는 MatchingService에서 이미 올려놨다고 가정
-        // 필요하면 여기서도 확인/보정 가능
-
-        // 로그
-        System.out.printf("[Service] Session accepted: sessionId=%d, counselorId=%d%n",
-                sessionId, counselorId);
+        log.info("[Service] Session ACCEPT: sessionId={}, counselorId={}", sessionId, counselorId);
     }
 
+    // =========================================================
+    // 5. 세션 취소(CANCEL)
+    // =========================================================
     @Transactional
     public void cancelSession(Long sessionId, Long actorId, String reason) {
 
         ChatSession session = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        // 🔹 종료 권한(유저/상담사) 체크
-        if (!actorId.equals(session.getUserId()) &&
-                !actorId.equals(session.getCounselorId())) {
-            throw new SecurityException("세션 취소 권한이 없습니다.");
-        }
+        validateAccess(session, actorId);
+        validateNotFinished(session);
 
-        // 🔹 상태 업데이트
+        // 상태 변경
         session.setStatus(SessionStatus.CANCELLED);
         session.setUpdatedAt(LocalDateTime.now());
 
-        // 🔹 Redis 상태 보정
-        redisTemplate.opsForValue().set(
-                RedisKeyManager.sessionStatus(sessionId),
-                "CANCELLED"
-        );
+        // Redis 변경
+        redisTemplate.opsForValue().set(RedisKeyManager.sessionStatus(sessionId), "CANCELLED");
 
-        // 🔹 상담사의 Load 조정 (배정된 경우만)
+        // load 감소
         if (session.getCounselorId() != null) {
             redisTemplate.opsForValue().increment(
-                    RedisKeyManager.counselorLoad(session.getCounselorId()),
-                    -1
+                    RedisKeyManager.counselorLoad(session.getCounselorId()), -1
             );
 
-            // 상담사 상태 → AFTER_CALL
-            redisTemplate.opsForValue().set(
-                    RedisKeyManager.counselorStatus(session.getCounselorId()),
-                    "AFTER_CALL"
-            );
+            redisTemplate.opsForValue()
+                    .set(RedisKeyManager.counselorStatus(session.getCounselorId()), "AFTER_CALL");
         }
+
+        String actorType = actorId.equals(session.getUserId()) ? "USER" : "COUNSELOR";
+        eventService.sendCancel(sessionId, actorId, actorType);
 
         log.info("[Service] Session CANCELLED: sessionId={}, by actorId={}", sessionId, actorId);
     }
 
+    // =========================================================
+    // 6. 공통 검증 로직
+    // =========================================================
+    private void validateAccess(ChatSession session, Long actorId) {
+        if (!actorId.equals(session.getUserId()) &&
+                !actorId.equals(session.getCounselorId())) {
+            throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
+        }
+    }
+
+    private void validateNotFinished(ChatSession session) {
+        if (session.getStatus() == SessionStatus.ENDED ||
+                session.getStatus() == SessionStatus.CANCELLED) {
+            throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
+        }
+    }
 }

@@ -1,5 +1,7 @@
 package com.chatmatchingservice.springchatmatching.global.auth.jwt;
 
+import com.chatmatchingservice.springchatmatching.global.error.CustomException;
+import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.annotation.PostConstruct;
@@ -10,8 +12,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -29,6 +29,10 @@ public class JwtTokenProvider {
     private final long ACCESS_EXP = 1000L * 60 * 30;
     private final long REFRESH_EXP = 1000L * 60 * 60 * 24 * 14;
 
+
+    // ============================================
+    // 1. RSA 키 로드
+    // ============================================
     @PostConstruct
     public void init() {
         try {
@@ -58,10 +62,20 @@ public class JwtTokenProvider {
 
         } catch (Exception e) {
             log.error("❌ RSA 키 로딩 실패: {}", e.getMessage());
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
-    /** ACCESS TOKEN 생성 */
+
+
+    // ============================================
+    // 2. ACCESS TOKEN 생성
+    // ============================================
     public String generateAccessToken(Long userId, String role) {
+
+        if (userId == null || role == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
         long now = System.currentTimeMillis();
 
         return Jwts.builder()
@@ -69,12 +83,20 @@ public class JwtTokenProvider {
                 .claim("role", role)
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + ACCESS_EXP))
-                .signWith(privateKey) // RS256 자동 적용
+                .signWith(privateKey)
                 .compact();
     }
 
-    /** REFRESH TOKEN 생성 */
+
+    // ============================================
+    // 3. REFRESH TOKEN 생성
+    // ============================================
     public String generateRefreshToken(Long userId) {
+
+        if (userId == null) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
         long now = System.currentTimeMillis();
 
         return Jwts.builder()
@@ -85,37 +107,64 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    /** 토큰 검증 */
+
+    // ============================================
+    // 4. JWT 검증
+    // ============================================
     public boolean validateToken(String token) {
+
+        if (token == null || token.isBlank()) {
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
         try {
             Jwts.parser()
-                    .verifyWith(publicKey)   // parserBuilder → parser() + verifyWith() 로 변경됨
+                    .verifyWith(publicKey)
                     .build()
                     .parseSignedClaims(token);
 
             return true;
+
         } catch (Exception e) {
             log.warn("JWT 검증 실패: {}", e.getMessage());
-            return false;
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
     }
 
-    /** Authentication 생성 */
+
+    // ============================================
+    // 5. Authentication 생성
+    // ============================================
     public Authentication getAuthentication(String token) {
 
-        Claims claims = Jwts.parser()
-                .verifyWith(publicKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        try {
+            Claims claims = Jwts.parser()
+                    .verifyWith(publicKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
 
-        String role = claims.get("role", String.class);
-        Long userId = Long.valueOf(claims.getSubject());
+            String role = claims.get("role", String.class);
+            String subject = claims.getSubject();
 
-        return new UsernamePasswordAuthenticationToken(
-                userId,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + role))
-        );
+            if (role == null || subject == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+
+            Long userId = Long.valueOf(subject);
+
+            return new UsernamePasswordAuthenticationToken(
+                    userId,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + role))
+            );
+
+        } catch (CustomException e) {
+            throw e; // 우리가 던진 CustomException 그대로 유지
+
+        } catch (Exception e) {
+            log.warn("JWT 인증 정보 파싱 실패: {}", e.getMessage());
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
     }
 }

@@ -17,15 +17,21 @@ public class UserEndSessionService extends EndSessionTemplate implements EndSess
         super(sessionRepository, redisTemplate);
     }
 
+    /**
+     * 세션 종료 로그 저장
+     * (추후 DB 로그 테이블로 확장 가능)
+     */
     @Override
     protected void saveLog(Long sessionId, Long counselorId) {
         log.info("[EndSession][USER] counsel_log 저장: sessionId={}, counselorId={}",
                 sessionId, counselorId);
     }
 
+    /**
+     * EndSessionService 인터페이스 구현
+     */
     @Override
     public void end(Long sessionId, Long counselorId) {
-        // Template Method 실행
         super.endSession(sessionId, counselorId);
     }
 }

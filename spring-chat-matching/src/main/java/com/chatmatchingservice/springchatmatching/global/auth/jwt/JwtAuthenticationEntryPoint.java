@@ -1,5 +1,6 @@
 package com.chatmatchingservice.springchatmatching.global.auth.jwt;
 
+import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.AuthenticationException;
@@ -15,9 +16,20 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(
             HttpServletRequest request,
             HttpServletResponse response,
-            AuthenticationException authException) throws IOException {
+            AuthenticationException authException
+    ) throws IOException {
 
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.getWriter().write("Unauthorized");
+        ErrorCode error = ErrorCode.UNAUTHORIZED;
+
+        response.setStatus(error.getStatus().value());
+        response.setContentType("application/json;charset=UTF-8");
+
+        String body = String.format(
+                "{\"code\":\"%s\",\"message\":\"%s\"}",
+                error.getCode(),
+                error.getMessage()
+        );
+
+        response.getWriter().write(body);
     }
 }

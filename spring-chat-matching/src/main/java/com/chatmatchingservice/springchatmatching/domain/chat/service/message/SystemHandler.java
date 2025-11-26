@@ -8,50 +8,49 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 상담사 배정(ASSIGNED) 메시지 처리 핸들러
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class AssignedHandler implements MessageHandler {
+public class SystemHandler implements MessageHandler {
 
     private final RedisPublisher redisPublisher;
 
     @Override
     public boolean supports(String type) {
-        return "ASSIGNED".equalsIgnoreCase(type);
+        return "SYSTEM".equalsIgnoreCase(type);
     }
 
     @Override
     public void handle(WSMessage message) {
+
         try {
-            // ======================
-            // 1) 기본 유효성 검사
-            // ======================
+            // -------------------------
+            // 1) 유효성 검사
+            // -------------------------
             if (message == null) {
                 throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
             }
-
-            if (message.getSessionId() == null ||
-                    message.getSessionId().isBlank()) {
+            if (message.getSessionId() == null || message.getSessionId().isBlank()) {
                 throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
             }
 
-            // ======================
-            // 2) 실제 메시지 처리
-            // ======================
-            log.info("[Handler][ASSIGNED] 상담사 배정 이벤트 처리: {}", message);
-
             String channel = "ws:session:" + message.getSessionId();
+
+            // -------------------------
+            // 2) Redis 발행
+            // -------------------------
             redisPublisher.publish(channel, message);
 
+            log.info("[Handler][SYSTEM] 시스템 메시지 처리 완료: sessionId={}, msg={}",
+                    message.getSessionId(), message.getMessage());
+
         } catch (CustomException e) {
-            log.error("[Handler][ASSIGNED] CustomException 발생: {}", e.getErrorCode().getCode());
-            throw e;  // 그대로 WebSocket 처리 계층으로 전달됨
+            log.error("[SYSTEM Handler] CustomException: code={}, msg={}",
+                    e.getErrorCode().getCode(), e.getMessage());
+            throw e;
 
         } catch (Exception e) {
-            log.error("[Handler][ASSIGNED] 처리 중 예외 발생: {}", e.getMessage(), e);
+            log.error("[SYSTEM Handler] 처리 중 예상치 못한 오류: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }

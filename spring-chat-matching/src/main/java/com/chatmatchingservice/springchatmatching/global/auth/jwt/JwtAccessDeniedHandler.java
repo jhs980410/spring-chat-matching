@@ -1,5 +1,6 @@
 package com.chatmatchingservice.springchatmatching.global.auth.jwt;
 
+import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,9 +16,20 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
     public void handle(
             HttpServletRequest request,
             HttpServletResponse response,
-            AccessDeniedException accessDeniedException) throws IOException {
+            AccessDeniedException accessDeniedException
+    ) throws IOException {
 
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.getWriter().write("Access Denied");
+        ErrorCode error = ErrorCode.FORBIDDEN;
+
+        response.setStatus(error.getStatus().value());
+        response.setContentType("application/json;charset=UTF-8");
+
+        String body = String.format(
+                "{\"code\":\"%s\",\"message\":\"%s\"}",
+                error.getCode(),
+                error.getMessage()
+        );
+
+        response.getWriter().write(body);
     }
 }

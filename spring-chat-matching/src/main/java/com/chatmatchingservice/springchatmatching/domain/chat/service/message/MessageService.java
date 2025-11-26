@@ -1,8 +1,9 @@
 package com.chatmatchingservice.springchatmatching.domain.chat.service.message;
 
-
 import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatMessage;
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatMessageRepository;
+import com.chatmatchingservice.springchatmatching.global.error.CustomException;
+import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
 import lombok.RequiredArgsConstructor;
@@ -22,33 +23,74 @@ public class MessageService {
 
     /**
      * 채팅 메시지 처리:
-     * 1) DB 저장
-     * 2) Redis Pub/Sub으로 WSMessage 전달
+     * 1) WSMessage 유효성 체크
+     * 2) DB 저장
+     * 3) Redis Pub/Sub 발행
      */
     public void handleMessage(WSMessage msg) {
+
         try {
-            Long sessionId = Long.valueOf(msg.getSessionId());
+            // -------------------------
+            // 1) 유효성 검사
+            // -------------------------
+            if (msg == null) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            if (msg.getSessionId() == null || msg.getSessionId().isBlank()) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            if (msg.getMessage() == null || msg.getMessage().isBlank()) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            }
 
-            // 1. DB 저장
-            ChatMessage saved = messageRepository.save(
-                    ChatMessage.builder()
-                            .sessionId(sessionId)
-                            .senderType(msg.getSenderType())
-                            .senderId(msg.getSenderId())
-                            .message(msg.getMessage())
-                            .createdAt(Instant.ofEpochMilli(msg.getTimestamp()))
-                            .build()
-            );
+            Long sessionId;
+            try {
+                sessionId = Long.valueOf(msg.getSessionId());
+            } catch (Exception e) {
+                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            }
 
-            // 2. Redis Pub/Sub 발행
-            String channel = RedisKeyManager.wsChannel(sessionId);
-            redisTemplate.convertAndSend(channel, msg);
+            // -------------------------
+            // 2) DB 저장
+            // -------------------------
+            ChatMessage entity = ChatMessage.builder()
+                    .sessionId(sessionId)
+                    .senderType(msg.getSenderType())
+                    .senderId(msg.getSenderId())
+                    .message(msg.getMessage())
+                    .createdAt(
+                            msg.getTimestamp() != null
+                                    ? Instant.ofEpochMilli(msg.getTimestamp())
+                                    : Instant.now()
+                    )
+                    .build();
 
-            log.info("[Message] 채팅 메시지 저장 및 전달 완료. sessionId={}, senderId={}",
+            messageRepository.save(entity);
+
+            // -------------------------
+            // 3) Redis Pub/Sub 발행
+            // -------------------------
+            try {
+                String channel = RedisKeyManager.wsChannel(sessionId);
+                redisTemplate.convertAndSend(channel, msg);
+            } catch (Exception e) {
+                log.error("[MessageService] Redis publish 실패: {}", e.getMessage());
+                throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            }
+
+            log.info("[MessageService] 메시지 저장 및 전달 완료 sessionId={}, senderId={}",
                     msg.getSessionId(), msg.getSenderId());
 
+        } catch (CustomException e) {
+            // 비즈니스 예외는 그대로 전파
+            log.error("[MessageService] CustomException: code={}, msg={}",
+                    e.getErrorCode().getCode(), e.getMessage());
+            throw e;
+
         } catch (Exception e) {
-            log.error("[Message] 메시지 처리 중 오류: {}", e.getMessage(), e);
+            // 기타 예외는 서버 오류 처리
+            log.error("[MessageService] 처리 중 예상치 못한 오류: {}", e.getMessage(), e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 }

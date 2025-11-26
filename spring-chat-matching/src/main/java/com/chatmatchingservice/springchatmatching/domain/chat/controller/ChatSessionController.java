@@ -117,6 +117,27 @@ public class ChatSessionController {
         return ResponseEntity.ok("CANCELLED");
     }
 
+    // ============================================
+// 6. 세션 종료 (END)
+// ============================================
+    @PatchMapping("/{sessionId}/end")
+    public ResponseEntity<String> endSession(
+            @PathVariable Long sessionId,
+            @RequestBody EndSessionRequest request,
+            Authentication auth
+    ) {
+        Long actorId = (Long) auth.getPrincipal();
 
+        log.info("[API] End session : sessionId={}, actorId={}, reason={}",
+                sessionId, actorId, request.reason());
+
+        chatSessionService.endSession(
+                sessionId,
+                actorId,
+                request.reason()
+        );
+
+        return ResponseEntity.ok("ENDED");
+    }
   
 }
