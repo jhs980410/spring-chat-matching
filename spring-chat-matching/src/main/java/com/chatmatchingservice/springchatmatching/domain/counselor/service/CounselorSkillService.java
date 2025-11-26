@@ -4,10 +4,9 @@ import com.chatmatchingservice.springchatmatching.domain.counselor.entity.Counse
 import com.chatmatchingservice.springchatmatching.domain.counselor.repository.CounselorSkillRepository;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,22 +15,23 @@ import org.springframework.stereotype.Service;
 public class CounselorSkillService {
 
     private final CounselorSkillRepository skillRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisRepository redisRepository;   // 🔥 RedisTemplate → RedisRepository
 
     /**
      * 상담사의 상담 가능 카테고리 추가
      */
     public void addSkill(Long counselorId, Long categoryId) {
         try {
+            // 1) DB 저장
             skillRepository.save(new CounselorSkill(counselorId, categoryId));
 
-            // Redis SET 추가
-            redisTemplate.opsForSet().add(
-                    RedisKeyManager.categoryCounselors(categoryId),
-                    counselorId
-            );
+            // 2) Redis SET 추가 (Repository 사용)
+            redisRepository.addCounselorToCategory(categoryId, counselorId);
 
             log.info("[Skill] ADD: counselorId={}, categoryId={}", counselorId, categoryId);
+
+        } catch (CustomException e) {
+            throw e;
 
         } catch (Exception e) {
             log.error("[Skill] ADD 처리 중 예외: {}", e.getMessage(), e);
@@ -44,22 +44,21 @@ public class CounselorSkillService {
      */
     public void removeSkill(Long skillId) {
         try {
+            // 1) DB 조회
             CounselorSkill skill = skillRepository.findById(skillId)
                     .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND));
 
+            // 2) DB 삭제
             skillRepository.delete(skill);
 
-            // Redis SET 에서 제거
-            redisTemplate.opsForSet().remove(
-                    RedisKeyManager.categoryCounselors(skill.getCategoryId()),
-                    skill.getCounselorId()
-            );
+            // 3) Redis SET 제거
+            redisRepository.removeCounselorFromCategory(skill.getCategoryId(), skill.getCounselorId());
 
             log.info("[Skill] REMOVE: skillId={}, counselorId={}, categoryId={}",
                     skillId, skill.getCounselorId(), skill.getCategoryId());
 
         } catch (CustomException e) {
-            throw e; // 그대로 전달
+            throw e;
 
         } catch (Exception e) {
             log.error("[Skill] REMOVE 처리 중 예외: {}", e.getMessage(), e);

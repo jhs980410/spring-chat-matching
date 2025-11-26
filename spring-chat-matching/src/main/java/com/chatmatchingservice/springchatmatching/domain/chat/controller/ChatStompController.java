@@ -3,8 +3,9 @@ package com.chatmatchingservice.springchatmatching.domain.chat.controller;
 
 import com.chatmatchingservice.springchatmatching.domain.chat.service.message.MessageHandler;
 import com.chatmatchingservice.springchatmatching.domain.chat.websocket.MessageFactory;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
+
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisPublisher;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,7 @@ public class ChatStompController {
 
     private final RedisPublisher redisPublisher;
     private final MessageFactory messageFactory;
+    private final RedisRepository redisRepository;
 
     @MessageMapping("/session/{sessionId}")
     public void sendMessage(@DestinationVariable String sessionId,
@@ -67,7 +69,7 @@ public class ChatStompController {
             handler.handle(enriched);
 
             // 2) Redis Pub/Sub 브로드캐스트
-            String channel = RedisKeyManager.wsChannel(Long.valueOf(sessionId));
+            String channel = redisRepository.wsChannel(Long.valueOf(sessionId));
             redisPublisher.publish(channel, enriched);
 
         } catch (Exception e) {

@@ -10,10 +10,9 @@ import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatSes
 import com.chatmatchingservice.springchatmatching.domain.chat.service.end.EndSessionFacade;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +28,7 @@ public class ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final EndSessionFacade endSessionFacade;
     private final ChatMessageRepository chatMessageRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisRepository redisRepository;   //  RedisTemplate → RedisRepository
     private final ChatSessionEventService eventService;
 
     // =========================================================
@@ -80,13 +79,10 @@ public class ChatSessionService {
         ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        // 권한 체크
         validateAccess(session, actorId);
-
-        // 이미 종료된 상태 확인
         validateNotFinished(session);
 
-        // DB 처리
+        // DB 처리 + Redis 처리
         endSessionFacade.endByUser(sessionId, session.getCounselorId());
 
         // WebSocket 알림
@@ -137,12 +133,10 @@ public class ChatSessionService {
         ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
 
-        // 허용된 상담사인지 확인
         if (!counselorId.equals(session.getCounselorId())) {
             throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
         }
 
-        // 종료 상태인지 확인
         validateNotFinished(session);
 
         // 상태 업데이트
@@ -150,8 +144,8 @@ public class ChatSessionService {
         session.setStartedAt(LocalDateTime.now());
 
         // Redis 반영
-        redisTemplate.opsForValue().set(RedisKeyManager.sessionStatus(sessionId), "IN_PROGRESS");
-        redisTemplate.opsForValue().set(RedisKeyManager.counselorStatus(counselorId), "BUSY");
+        redisRepository.setSessionStatus(sessionId, "IN_PROGRESS");    // 🔥 변경됨
+        redisRepository.setCounselorStatus(counselorId, "BUSY");       // 🔥 변경됨
 
         // WebSocket
         eventService.sendAccept(sessionId, counselorId);
@@ -171,21 +165,17 @@ public class ChatSessionService {
         validateAccess(session, actorId);
         validateNotFinished(session);
 
-        // 상태 변경
+        // DB 상태 변경
         session.setStatus(SessionStatus.CANCELLED);
         session.setUpdatedAt(LocalDateTime.now());
 
-        // Redis 변경
-        redisTemplate.opsForValue().set(RedisKeyManager.sessionStatus(sessionId), "CANCELLED");
+        // Redis 상태 변경
+        redisRepository.setSessionStatus(sessionId, "CANCELLED");   // 🔥 변경됨
 
         // load 감소
         if (session.getCounselorId() != null) {
-            redisTemplate.opsForValue().increment(
-                    RedisKeyManager.counselorLoad(session.getCounselorId()), -1
-            );
-
-            redisTemplate.opsForValue()
-                    .set(RedisKeyManager.counselorStatus(session.getCounselorId()), "AFTER_CALL");
+            redisRepository.incrementCounselorLoad(session.getCounselorId(), -1); // 🔥 변경됨
+            redisRepository.setCounselorStatus(session.getCounselorId(), "AFTER_CALL"); // 🔥 변경됨
         }
 
         String actorType = actorId.equals(session.getUserId()) ? "USER" : "COUNSELOR";

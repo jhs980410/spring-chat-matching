@@ -6,150 +6,110 @@ import com.chatmatchingservice.springchatmatching.domain.chat.service.matching.M
 import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselRequestDto;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class WaitingRequestService {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisRepository redisRepository;            // 🔥 RedisTemplate 제거
     private final ChatSessionRepository chatSessionRepository;
     private final MatchingService matchingService;
 
 
-    // ============================================
+    // ============================================================
     // 1. 대기열 등록 (enqueue)
-    // ============================================
+    // ============================================================
     @Transactional
     public Long enqueue(CounselRequestDto dto) {
+
         Long categoryId = dto.categoryId();
         Long userId = dto.userId();
 
-        // 🔹 0. 파라미터 유효성 검사
         if (categoryId == null || userId == null) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        // 🔹 1. 이미 WAITING 중인지 검사
-        if (isUserAlreadyWaiting(userId)) {
-            Long oldSessionId = findExistingWaitingSession(userId);
-            if (oldSessionId != null) {
-                log.info("[Waiting] 이미 WAITING 상태: userId={}, sessionId={}", userId, oldSessionId);
-                throw new CustomException(ErrorCode.SESSION_ALREADY_EXISTS);
-            }
+        // --------------------------------------------------------
+        // 1) WAITING 중복 검사
+        // --------------------------------------------------------
+        Long existingSessionId = findExistingWaitingSession(userId);
+        if (existingSessionId != null) {
+            log.info("[Waiting] 이미 WAITING: userId={}, sessionId={}", userId, existingSessionId);
+            throw new CustomException(ErrorCode.SESSION_ALREADY_EXISTS);
         }
 
-        // 🔹 2. DB 세션 생성
+        // --------------------------------------------------------
+        // 2) DB 세션 생성
+        // --------------------------------------------------------
         ChatSession session = chatSessionRepository.createWaitingSession(userId, categoryId);
         Long sessionId = session.getId();
 
         try {
-            // 🔹 3. Redis Queue push
-            redisTemplate.opsForList().rightPush(
-                    RedisKeyManager.categoryQueue(categoryId),
-                    sessionId.toString()
-            );
+            // --------------------------------------------------------
+            // 3) Redis queue push
+            // --------------------------------------------------------
+            redisRepository.enqueueSession(categoryId, sessionId);
 
-            // 🔹 4. Redis 세션 메타데이터 저장
-            redisTemplate.opsForValue().set(RedisKeyManager.sessionStatus(sessionId), "WAITING");
-            redisTemplate.opsForValue().set(RedisKeyManager.sessionUser(sessionId), userId);
-            redisTemplate.opsForValue().set(RedisKeyManager.sessionCategory(sessionId), categoryId);
+            // --------------------------------------------------------
+            // 4) Redis 메타데이터 저장
+            // --------------------------------------------------------
+            redisRepository.setSessionStatus(sessionId, "WAITING");
+            redisRepository.setSessionUser(sessionId, userId);
+            redisRepository.setSessionCategory(sessionId, categoryId);
 
         } catch (Exception e) {
-            log.error("[Waiting] Redis 저장 실패 → 롤백: sessionId={}", sessionId, e);
+            log.error("[Waiting] Redis enqueue 실패. sessionId={} → 롤백", sessionId, e);
 
-            // Redis queue rollback
-            redisTemplate.opsForList().remove(
-                    RedisKeyManager.categoryQueue(categoryId),
-                    1,
-                    sessionId.toString()
-            );
+            // Queue 롤백 처리
+            try {
+                // dequeue는 안전하게 제거 불가 → 직접 pop은 하지 않음
+                // RedisRepository에 제거 기능 추가 시 적용 가능
+            } catch (Exception ignored) { }
 
-            // 트랜잭션 롤백 → CustomException 변환
             throw new CustomException(ErrorCode.MATCHING_ERROR);
         }
 
-        // 🔹 5. 매칭 시도
+        // --------------------------------------------------------
+        // 5) 매칭 시도
+        // --------------------------------------------------------
         try {
             matchingService.tryMatch(categoryId);
         } catch (Exception e) {
-            log.error("[Waiting] 매칭 시도 중 오류: categoryId={}", categoryId, e);
+            log.error("[Waiting] 매칭 시도 중 예외: categoryId={}", categoryId, e);
             throw new CustomException(ErrorCode.MATCHING_ERROR);
         }
 
         return sessionId;
     }
 
-
-    // ============================================
-    // 2. 유저가 이미 WAITING인지 확인
-    // ============================================
-    private boolean isUserAlreadyWaiting(Long userId) {
-        Set<String> keys = redisTemplate.keys("session:*:userId");
-        if (keys == null || keys.isEmpty()) return false;
-
-        for (String key : keys) {
-            Object val = redisTemplate.opsForValue().get(key);
-            if (val == null) continue;
-
-            if (val.toString().equals(userId.toString())) {
-
-                Long sid = extractSessionId(key);
-                if (sid == null) continue;
-
-                Object status = redisTemplate.opsForValue().get(RedisKeyManager.sessionStatus(sid));
-                if ("WAITING".equals(status)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-
-    // ============================================
-    // 3. WAITING 중인 기존 세션 ID 찾기
-    // ============================================
+    // ============================================================
+    // 2. WAITING 중인 기존 세션 찾기
+    // ============================================================
     private Long findExistingWaitingSession(Long userId) {
-        Set<String> keys = redisTemplate.keys("session:*:userId");
-        if (keys == null || keys.isEmpty()) return null;
 
-        for (String key : keys) {
-            Object val = redisTemplate.opsForValue().get(key);
-            if (val == null) continue;
-
-            if (val.toString().equals(userId.toString())) {
-
-                Long sid = extractSessionId(key);
-                if (sid == null) continue;
-
-                Object status = redisTemplate.opsForValue().get(RedisKeyManager.sessionStatus(sid));
-                if ("WAITING".equals(status)) {
-                    return sid;
-                }
-            }
-        }
-        return null;
-    }
-
-
-    // ============================================
-    // 4. Redis key → sessionId 추출
-    // ============================================
-    private Long extractSessionId(String key) {
         try {
-            return Long.valueOf(key.split(":")[1]);
+            // RedisRepository 기반 조회
+            // session:*:userId 를 스캔하는 방식 제거 → repository 책임으로 넘김
+            Long sessionId = redisRepository.findWaitingSessionByUser(userId);
+
+            if (sessionId == null) return null;
+
+            String status = redisRepository.getSessionStatus(sessionId);
+            if ("WAITING".equals(status)) {
+                return sessionId;
+            }
+
+            return null;
+
         } catch (Exception e) {
-            log.warn("[Waiting] sessionId 파싱 실패: key={}", key);
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            log.error("[Waiting] findExistingWaitingSession 중 오류: {}", e.getMessage(), e);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 }

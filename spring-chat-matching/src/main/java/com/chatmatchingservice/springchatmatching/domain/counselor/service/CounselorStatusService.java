@@ -5,10 +5,9 @@ import com.chatmatchingservice.springchatmatching.domain.counselor.dto.Counselor
 import com.chatmatchingservice.springchatmatching.domain.counselor.entity.CounselorStatus;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,18 +16,16 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CounselorStatusService {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisRepository redisRepository;
     private final MatchingService matchingService;
 
-    // Load 초기화 상수
-    private static final String ZERO_LOAD = "0";
+    private static final long ZERO_LOAD = 0L;
 
     /**
-     * 상담사 상태 업데이트 (ONLINE/OFFLINE/AFTER_CALL/BUSY)
+     * 상담사 상태 업데이트 (ONLINE / OFFLINE / AFTER_CALL / BUSY)
      */
     @Transactional
     public void updateStatus(long counselorId, CounselorStatusUpdateRequest req) {
-
         try {
             CounselorStatus status = req.getStatus();
             Long categoryId = req.getCategoryId();
@@ -38,47 +35,35 @@ public class CounselorStatusService {
             }
 
             // 1) 상태 저장
-            redisTemplate.opsForValue().set(
-                    RedisKeyManager.counselorStatus(counselorId), status.name()
-            );
+            redisRepository.setCounselorStatus(counselorId, status.name());
 
-            // ============================
+            // -------------------------------------------------------
             // OFFLINE 처리
-            // ============================
+            // -------------------------------------------------------
             if (status == CounselorStatus.OFFLINE) {
 
-                // Load 초기화
-                redisTemplate.opsForValue().set(
-                        RedisKeyManager.counselorLoad(counselorId), ZERO_LOAD
-                );
+                redisRepository.setCounselorLoad(counselorId, ZERO_LOAD);
 
-                // 카테고리 후보군 제거
                 if (categoryId != null) {
-                    redisTemplate.opsForSet().remove(
-                            RedisKeyManager.categoryCounselors(categoryId), counselorId
-                    );
+                    redisRepository.removeCounselorFromCategory(categoryId, counselorId);
                 }
 
                 log.info("[CounselorStatus] OFFLINE → counselorId={}", counselorId);
                 return;
             }
 
-            // ============================
-            // 온라인/대기 상태 처리
-            // ============================
+            // -------------------------------------------------------
+            // 온라인 / 대기 상태 처리
+            // -------------------------------------------------------
 
-            // OFFLINE이 아니면 카테고리 후보군에 유지
+            // 후보군 유지
             if (categoryId != null) {
-                redisTemplate.opsForSet().add(
-                        RedisKeyManager.categoryCounselors(categoryId), counselorId
-                );
+                redisRepository.addCounselorToCategory(categoryId, counselorId);
             }
 
-            // ONLINE → Load = 0으로 리셋
+            // ONLINE → Load 0 초기화
             if (status == CounselorStatus.ONLINE) {
-                redisTemplate.opsForValue().set(
-                        RedisKeyManager.counselorLoad(counselorId), ZERO_LOAD
-                );
+                redisRepository.setCounselorLoad(counselorId, ZERO_LOAD);
             }
 
             // READY 상태 → 매칭 트리거
@@ -105,24 +90,17 @@ public class CounselorStatusService {
      */
     @Transactional
     public void setAfterCall(Long counselorId) {
-
         try {
-            redisTemplate.opsForValue().set(
-                    RedisKeyManager.counselorStatus(counselorId),
-                    "AFTER_CALL"
-            );
+            // 상태 변경
+            redisRepository.setCounselorStatus(counselorId, "AFTER_CALL");
 
-            redisTemplate.opsForValue().increment(
-                    RedisKeyManager.counselorLoad(counselorId),
-                    -1
-            );
+            // Load -1
+            redisRepository.incrementCounselorLoad(counselorId, -1L);
 
-            redisTemplate.opsForValue().set(
-                    RedisKeyManager.counselorLastFinished(counselorId),
-                    String.valueOf(System.currentTimeMillis())
-            );
+            // 마지막 상담 종료시간 기록
+            redisRepository.setCounselorLastFinished(counselorId, System.currentTimeMillis());
 
-            log.info("[CounselorStatus] AFTER_CALL: counselorId={}", counselorId);
+            log.info("[CounselorStatus] AFTER_CALL 처리 완료: counselorId={}", counselorId);
 
         } catch (Exception e) {
             log.error("[CounselorStatus] setAfterCall 중 예외: {}", e.getMessage(), e);

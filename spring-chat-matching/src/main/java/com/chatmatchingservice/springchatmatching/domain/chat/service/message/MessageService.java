@@ -4,11 +4,10 @@ import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatMessage
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatMessageRepository;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,7 +18,7 @@ import java.time.Instant;
 public class MessageService {
 
     private final ChatMessageRepository messageRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisRepository redisRepository;   // 🔥 RedisRepository 기반
 
     /**
      * 채팅 메시지 처리:
@@ -68,11 +67,10 @@ public class MessageService {
             messageRepository.save(entity);
 
             // -------------------------
-            // 3) Redis Pub/Sub 발행
+            // 3) Redis Pub/Sub 발행 (RedisRepository 사용)
             // -------------------------
             try {
-                String channel = RedisKeyManager.wsChannel(sessionId);
-                redisTemplate.convertAndSend(channel, msg);
+                redisRepository.publishToWsChannel(sessionId, msg);   // 🔥 변경됨
             } catch (Exception e) {
                 log.error("[MessageService] Redis publish 실패: {}", e.getMessage());
                 throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
@@ -82,13 +80,11 @@ public class MessageService {
                     msg.getSessionId(), msg.getSenderId());
 
         } catch (CustomException e) {
-            // 비즈니스 예외는 그대로 전파
             log.error("[MessageService] CustomException: code={}, msg={}",
                     e.getErrorCode().getCode(), e.getMessage());
             throw e;
 
         } catch (Exception e) {
-            // 기타 예외는 서버 오류 처리
             log.error("[MessageService] 처리 중 예상치 못한 오류: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }

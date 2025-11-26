@@ -5,17 +5,16 @@ import com.chatmatchingservice.springchatmatching.domain.chat.entity.SessionStat
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatSessionRepository;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisKeyManager;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 
 @RequiredArgsConstructor
 @Slf4j
 public abstract class EndSessionTemplate {
 
     protected final ChatSessionRepository sessionRepository;
-    protected final RedisTemplate<String, Object> redisTemplate;
+    protected final RedisRepository redisRepository;   //  변경됨
 
     /**
      * Template Method
@@ -26,7 +25,7 @@ public abstract class EndSessionTemplate {
         ChatSession session = validateSession(sessionId, counselorId);
 
         try {
-            // 2) 종료 상태 업데이트
+            // 2) 종료 상태 업데이트 (DB + Redis)
             updateSessionStatus(sessionId);
 
             // 3) 상담사 load 감소
@@ -82,8 +81,7 @@ public abstract class EndSessionTemplate {
     protected void updateSessionStatus(Long sessionId) {
         try {
             sessionRepository.endSession(sessionId);  // DB: 상태 ENDED
-            redisTemplate.opsForValue()
-                    .set(RedisKeyManager.sessionStatus(sessionId), "ENDED");
+            redisRepository.setSessionStatus(sessionId, "ENDED");   //  변경됨
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -95,8 +93,7 @@ public abstract class EndSessionTemplate {
      */
     protected void decreaseLoad(Long counselorId) {
         try {
-            redisTemplate.opsForValue()
-                    .increment(RedisKeyManager.counselorLoad(counselorId), -1);
+            redisRepository.incrementCounselorLoad(counselorId, -1);   //  변경됨
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
@@ -108,12 +105,11 @@ public abstract class EndSessionTemplate {
      */
     protected void markAfterCall(Long counselorId) {
         try {
-            redisTemplate.opsForValue()
-                    .set(RedisKeyManager.counselorStatus(counselorId), "AFTER_CALL");
-
-            redisTemplate.opsForValue()
-                    .set(RedisKeyManager.counselorLastFinished(counselorId),
-                            String.valueOf(System.currentTimeMillis()));
+            redisRepository.setCounselorStatus(counselorId, "AFTER_CALL");  //  변경됨
+            redisRepository.setCounselorLastFinished(
+                    counselorId,
+                    System.currentTimeMillis()                               //  변경됨
+            );
         } catch (Exception e) {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
