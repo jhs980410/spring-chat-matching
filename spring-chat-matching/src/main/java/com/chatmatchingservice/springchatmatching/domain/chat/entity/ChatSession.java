@@ -21,7 +21,8 @@ public class ChatSession {
     private Long userId;
     private Long counselorId;
     private Long categoryId;
-
+    @Column(name = "domain_id")
+    private Long domainId;
     @Enumerated(EnumType.STRING)
     private SessionStatus status;  // WAITING / IN_PROGRESS / AFTER_CALL / ENDED
 
@@ -37,6 +38,16 @@ public class ChatSession {
         return ChatSession.builder()
                 .userId(userId)
                 .categoryId(categoryId)
+                .status(SessionStatus.WAITING)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
+                .build();
+    }
+    public static ChatSession createWaiting(Long userId, Long categoryId, Long domainId) {
+        return ChatSession.builder()
+                .userId(userId)
+                .categoryId(categoryId)
+                .domainId(domainId) // <-- domainId 설정 추가
                 .status(SessionStatus.WAITING)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

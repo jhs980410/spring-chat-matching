@@ -30,7 +30,7 @@ public class WaitingRequestService {
 
         Long categoryId = dto.categoryId();
         Long userId = dto.userId();
-
+        Long domainId = dto.domainId();
         if (categoryId == null || userId == null) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
@@ -47,7 +47,7 @@ public class WaitingRequestService {
         // --------------------------------------------------------
         // 2) DB 세션 생성
         // --------------------------------------------------------
-        ChatSession session = chatSessionRepository.createWaitingSession(userId, categoryId);
+        ChatSession session = chatSessionRepository.createWaitingSession(userId, categoryId,domainId);
         Long sessionId = session.getId();
 
         try {

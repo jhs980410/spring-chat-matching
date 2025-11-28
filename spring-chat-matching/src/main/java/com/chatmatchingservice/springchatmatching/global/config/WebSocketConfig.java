@@ -22,11 +22,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
 
         registry.addEndpoint("/ws/connect")
-                .setAllowedOriginPatterns(
-                        "http://localhost:5173",
-                        "http://localhost:5174",
-                        "https://*.o-r.kr"
-                )
+//                .setAllowedOriginPatterns(
+//                        "http://localhost:5173",
+//                        "http://localhost:5174",
+//                        "https://*.o-r.kr"
+//                )
+                //로컬테스트용  전체 오픈
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
 
         log.info("🔌 WebSocket STOMP Endpoint 등록 완료: /ws/connect");

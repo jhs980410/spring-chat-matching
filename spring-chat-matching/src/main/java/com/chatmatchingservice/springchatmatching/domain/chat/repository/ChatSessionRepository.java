@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public interface ChatSessionRepository {
 
-    ChatSession createWaitingSession(Long userId, Long categoryId);
+    ChatSession createWaitingSession(Long userId, Long categoryId,Long domainId);
 
     void assignCounselor(Long sessionId, long counselorId);
     void endSession(Long sessionId);

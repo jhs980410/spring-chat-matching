@@ -1,6 +1,7 @@
 package com.chatmatchingservice.springchatmatching.infra.redis;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -16,19 +17,26 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class RedisConfig {
 
     @Bean
-    public RedisConnectionFactory redisConnectionFactory() {
-        // TODO: 운영 환경에 맞게 host/port 설정
-        return new LettuceConnectionFactory("localhost", 6379);
+    public RedisConnectionFactory redisConnectionFactory(
+            @Value("${spring.data.redis.host}") String host,
+            @Value("${spring.data.redis.port}") int port
+    ) {
+        return new LettuceConnectionFactory(host, port);
     }
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+
+        StringRedisSerializer string = new StringRedisSerializer();
+
+        // 🔥 모든 Key/Value를 문자열 기반으로 저장 (중요)
+        template.setKeySerializer(string);
+        template.setValueSerializer(string);
+        template.setHashKeySerializer(string);
+        template.setHashValueSerializer(string);
+
         return template;
     }
 

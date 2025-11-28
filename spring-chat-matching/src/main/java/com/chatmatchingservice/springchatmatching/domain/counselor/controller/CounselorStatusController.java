@@ -24,6 +24,7 @@ public class CounselorStatusController {
     public ResponseEntity<String> ready(Authentication auth) {
 
         Long counselorId = (Long) auth.getPrincipal();
+
         log.info("[API] Counselor → READY : id={}", counselorId);
 
         counselorStatusService.updateStatus(

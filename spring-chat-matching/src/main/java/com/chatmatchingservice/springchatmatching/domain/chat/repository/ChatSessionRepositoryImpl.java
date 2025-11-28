@@ -16,10 +16,11 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
     private final ChatSessionJpaRepository jpaRepository;
 
     @Override
-    public ChatSession createWaitingSession(Long userId, Long categoryId) {
+    public ChatSession createWaitingSession(Long userId, Long categoryId,Long domainId) {
         ChatSession session = ChatSession.builder()
                 .userId(userId)
                 .categoryId(categoryId)
+                .domainId(domainId)
                 .status(SessionStatus.WAITING)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

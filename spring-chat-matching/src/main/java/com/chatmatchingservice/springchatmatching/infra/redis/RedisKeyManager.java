@@ -34,11 +34,11 @@ public class RedisKeyManager {
     }
 
     public static String sessionUser(Long sessionId) {
-        return "session:" + sessionId + ":userId";
+        return "session:" + sessionId + ":user";
     }
 
     public static String sessionCategory(Long sessionId) {
-        return "session:" + sessionId + ":categoryId";
+        return "session:" + sessionId + ":category";
     }
 
     // ===================== WebSocket 채널 =====================

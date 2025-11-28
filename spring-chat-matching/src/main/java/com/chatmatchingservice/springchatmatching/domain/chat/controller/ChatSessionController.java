@@ -38,7 +38,8 @@ public class ChatSessionController {
         Long sessionId = waitingRequestService.enqueue(
                 new CounselRequestDto(
                         userId,
-                        request.categoryId()
+                        request.categoryId(),
+                        request.domainId()
                 )
         );
 
