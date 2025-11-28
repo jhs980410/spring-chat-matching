@@ -13,6 +13,7 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -52,7 +53,7 @@ public class StompHandler implements ChannelInterceptor {
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
-        return message;
+        return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
     }
 
     // =====================================================
@@ -91,7 +92,7 @@ public class StompHandler implements ChannelInterceptor {
 
         ChatPrincipal principal = new ChatPrincipal(id, role);
         accessor.setUser(principal);
-
+        accessor.setLeaveMutable(true);   //  프레임 유지
         log.info("[WS] CONNECT 성공: principalId={}, role={}", id, role);
     }
 

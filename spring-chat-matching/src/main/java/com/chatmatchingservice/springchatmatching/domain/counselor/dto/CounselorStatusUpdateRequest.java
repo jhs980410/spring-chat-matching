@@ -11,5 +11,4 @@ import lombok.NoArgsConstructor;
 public class CounselorStatusUpdateRequest {
     private Long counselorId;
     private CounselorStatus status;
-    private Long categoryId;
 }

@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -21,90 +23,89 @@ public class CounselorStatusService {
 
     private static final long ZERO_LOAD = 0L;
 
-    /**
-     * 상담사 상태 업데이트 (ONLINE / OFFLINE / AFTER_CALL / BUSY)
-     */
+    // ============================
+    // READY (ONLINE)
+    // ============================
     @Transactional
-    public void updateStatus(long counselorId, CounselorStatusUpdateRequest req) {
-        try {
-            CounselorStatus status = req.getStatus();
-            Long categoryId = req.getCategoryId();
+    public void ready(Long counselorId, List<Long> categoryIds) {
 
-            if (status == null) {
-                throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
-            }
+        if (categoryIds == null || categoryIds.isEmpty())
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
-            // 1) 상태 저장
-            redisRepository.setCounselorStatus(counselorId, status.name());
+        // 상태 설정
+        redisRepository.setCounselorStatus(counselorId, CounselorStatus.ONLINE.name());
 
-            // -------------------------------------------------------
-            // OFFLINE 처리
-            // -------------------------------------------------------
-            if (status == CounselorStatus.OFFLINE) {
+        // load 초기화
+        redisRepository.setCounselorLoad(counselorId, ZERO_LOAD);
 
-                redisRepository.setCounselorLoad(counselorId, ZERO_LOAD);
+        // 상담사 카테고리 Set 등록
+        redisRepository.setCounselorCategories(counselorId, categoryIds);
 
-                if (categoryId != null) {
-                    redisRepository.removeCounselorFromCategory(categoryId, counselorId);
-                }
-
-                log.info("[CounselorStatus] OFFLINE → counselorId={}", counselorId);
-                return;
-            }
-
-            // -------------------------------------------------------
-            // 온라인 / 대기 상태 처리
-            // -------------------------------------------------------
-
-            // 후보군 유지
-            if (categoryId != null) {
-                redisRepository.addCounselorToCategory(categoryId, counselorId);
-            }
-
-            // ONLINE → Load 0 초기화
-            if (status == CounselorStatus.ONLINE) {
-                redisRepository.setCounselorLoad(counselorId, ZERO_LOAD);
-            }
-
-            // READY 상태 → 매칭 트리거
-            if (status == CounselorStatus.ONLINE || status == CounselorStatus.AFTER_CALL) {
-                if (categoryId != null) {
-                    matchingService.tryMatch(categoryId);
-                }
-            }
-
-            log.info("[CounselorStatus] UPDATE: counselorId={}, status={}, categoryId={}",
-                    counselorId, status, categoryId);
-
-        } catch (CustomException e) {
-            throw e;
-
-        } catch (Exception e) {
-            log.error("[CounselorStatus] updateStatus 중 예외: {}", e.getMessage(), e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+        // 카테고리 후보군에 상담사 추가
+        for (Long categoryId : categoryIds) {
+            redisRepository.addCounselorToCategory(categoryId, counselorId);
         }
+
+        // 매칭 트리거
+        for (Long categoryId : categoryIds) {
+            matchingService.tryMatch(categoryId);
+        }
+
+        log.info("[READY] counselorId={}, categories={}", counselorId, categoryIds);
     }
 
-    /**
-     * 종료 후 AFTER_CALL 상태 처리
-     */
+
+    // ============================
+    // BUSY
+    // ============================
+    @Transactional
+    public void updateStatus(Long counselorId, CounselorStatusUpdateRequest req) {
+
+        if (req.getStatus() == null)
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+
+        redisRepository.setCounselorStatus(counselorId, req.getStatus().name());
+
+        log.info("[BUSY] counselorId={}", counselorId);
+    }
+
+
+    // ============================
+    // AFTER CALL
+    // ============================
     @Transactional
     public void setAfterCall(Long counselorId) {
-        try {
-            // 상태 변경
-            redisRepository.setCounselorStatus(counselorId, "AFTER_CALL");
 
-            // Load -1
-            redisRepository.incrementCounselorLoad(counselorId, -1L);
+        redisRepository.setCounselorStatus(counselorId, CounselorStatus.AFTER_CALL.name());
+        redisRepository.incrementCounselorLoad(counselorId, -1L);
+        redisRepository.setCounselorLastFinished(counselorId, System.currentTimeMillis());
 
-            // 마지막 상담 종료시간 기록
-            redisRepository.setCounselorLastFinished(counselorId, System.currentTimeMillis());
+        log.info("[AFTER_CALL] counselorId={}", counselorId);
+    }
 
-            log.info("[CounselorStatus] AFTER_CALL 처리 완료: counselorId={}", counselorId);
 
-        } catch (Exception e) {
-            log.error("[CounselorStatus] setAfterCall 중 예외: {}", e.getMessage(), e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+    // ============================
+    // OFFLINE
+    // ============================
+    @Transactional
+    public void offline(Long counselorId) {
+
+        // 상태 OFFLINE
+        redisRepository.setCounselorStatus(counselorId, CounselorStatus.OFFLINE.name());
+
+        // load 0 초기화
+        redisRepository.setCounselorLoad(counselorId, ZERO_LOAD);
+
+        // 모든 카테고리에서 상담사 제거
+        List<Long> categories = redisRepository.getCounselorCategories(counselorId);
+
+        for (Long categoryId : categories) {
+            redisRepository.removeCounselorFromCategory(categoryId, counselorId);
         }
+
+        // redis에서 상담사의 카테고리 정보 삭제
+        redisRepository.deleteCounselorCategories(counselorId);
+
+        log.info("[OFFLINE] counselorId={}, removedCategories={}", counselorId, categories);
     }
 }

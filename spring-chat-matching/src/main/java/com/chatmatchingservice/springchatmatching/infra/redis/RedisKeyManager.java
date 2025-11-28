@@ -23,7 +23,10 @@ public class RedisKeyManager {
     public static String categoryQueue(long categoryId) {
         return "queue:category:" + categoryId;
     }
-
+    // 🔥 상담사 → 멀티 카테고리 목록 저장용 (Set)
+    public static String counselorCategories(long counselorId) {
+        return "counselor:" + counselorId + ":categories";
+    }
     // ===================== 세션 =====================
     public static String sessionStatus(Long sessionId) {
         return "session:" + sessionId + ":status";

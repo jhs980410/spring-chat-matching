@@ -39,7 +39,10 @@ public interface RedisRepository {
 
     // 🔥 추가: 특정 세션을 대기열에서 제거
     void removeFromQueue(Long categoryId, Long sessionId);
-
+    // 멀티 카테고리 상담사 전용
+    void setCounselorCategories(Long counselorId, List<Long> categoryIds);
+    List<Long> getCounselorCategories(Long counselorId);
+    void deleteCounselorCategories(Long counselorId);
 
     // ================================
     // 세션 정보

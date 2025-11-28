@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
@@ -61,7 +63,37 @@ public class RedisRepositoryImpl implements RedisRepository {
                 String.valueOf(timestamp)
         );
     }
+    // ==========================================
+// 상담사 → 카테고리 목록 (멀티 READY지원)
+// ==========================================
+    @Override
+    public void setCounselorCategories(Long counselorId, List<Long> categoryIds) {
+        String key = RedisKeyManager.counselorCategories(counselorId);
 
+        String joined = categoryIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+
+        redisTemplate.opsForValue().set(key, joined);
+    }
+
+    @Override
+    public List<Long> getCounselorCategories(Long counselorId) {
+        String key = RedisKeyManager.counselorCategories(counselorId);
+
+        String value = (String) redisTemplate.opsForValue().get(key);
+        if (value == null || value.isBlank()) return List.of();
+
+        return Arrays.stream(value.split(","))
+                .map(Long::parseLong)
+                .toList();
+    }
+
+
+    @Override
+    public void deleteCounselorCategories(Long counselorId) {
+        redisTemplate.delete(RedisKeyManager.counselorCategories(counselorId));
+    }
     @Override
     public Long getCounselorLastFinished(Long counselorId) {
         Object val = redisTemplate.opsForValue().get(RedisKeyManager.counselorLastFinished(counselorId));

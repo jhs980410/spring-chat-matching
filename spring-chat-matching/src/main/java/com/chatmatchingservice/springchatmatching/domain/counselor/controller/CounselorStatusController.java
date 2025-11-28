@@ -1,5 +1,6 @@
 package com.chatmatchingservice.springchatmatching.domain.counselor.controller;
 
+import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselorReadyRequest;
 import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselorStatusUpdateRequest;
 import com.chatmatchingservice.springchatmatching.domain.counselor.entity.CounselorStatus;
 import com.chatmatchingservice.springchatmatching.domain.counselor.service.CounselorStatusService;
@@ -21,20 +22,15 @@ public class CounselorStatusController {
     // READY (ONLINE)
     // =========================
     @PatchMapping("/ready")
-    public ResponseEntity<String> ready(Authentication auth) {
-
+    public ResponseEntity<String> ready(
+            Authentication auth,
+            @RequestBody CounselorReadyRequest request
+    ) {
         Long counselorId = (Long) auth.getPrincipal();
 
-        log.info("[API] Counselor → READY : id={}", counselorId);
+        log.info("[API] Counselor READY: id={}, categories={}", counselorId, request.getCategoryIds());
 
-        counselorStatusService.updateStatus(
-                counselorId,
-                new CounselorStatusUpdateRequest(
-                        counselorId,
-                        CounselorStatus.ONLINE,
-                        null
-                )
-        );
+        counselorStatusService.ready(counselorId, request.getCategoryIds());
 
         return ResponseEntity.ok("READY");
     }
@@ -46,15 +42,10 @@ public class CounselorStatusController {
     public ResponseEntity<String> busy(Authentication auth) {
 
         Long counselorId = (Long) auth.getPrincipal();
-        log.info("[API] Counselor → BUSY : id={}", counselorId);
 
         counselorStatusService.updateStatus(
                 counselorId,
-                new CounselorStatusUpdateRequest(
-                        counselorId,
-                        CounselorStatus.BUSY,
-                        null
-                )
+                new CounselorStatusUpdateRequest(counselorId, CounselorStatus.BUSY)
         );
 
         return ResponseEntity.ok("BUSY");
@@ -62,19 +53,17 @@ public class CounselorStatusController {
 
 
     // =========================
-    // AFTER_CALL (후처리)
+    // AFTER_CALL
     // =========================
     @PatchMapping("/after-call")
     public ResponseEntity<String> afterCall(Authentication auth) {
 
         Long counselorId = (Long) auth.getPrincipal();
-        log.info("[API] Counselor → AFTER_CALL : id={}", counselorId);
 
         counselorStatusService.setAfterCall(counselorId);
 
         return ResponseEntity.ok("AFTER_CALL");
     }
-
 
     // =========================
     // OFFLINE
@@ -83,16 +72,8 @@ public class CounselorStatusController {
     public ResponseEntity<String> offline(Authentication auth) {
 
         Long counselorId = (Long) auth.getPrincipal();
-        log.info("[API] Counselor → OFFLINE : id={}", counselorId);
 
-        counselorStatusService.updateStatus(
-                counselorId,
-                new CounselorStatusUpdateRequest(
-                        counselorId,
-                        CounselorStatus.OFFLINE,
-                        null
-                )
-        );
+        counselorStatusService.offline(counselorId);
 
         return ResponseEntity.ok("OFFLINE");
     }
