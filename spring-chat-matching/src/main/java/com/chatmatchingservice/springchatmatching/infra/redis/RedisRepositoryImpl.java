@@ -300,7 +300,7 @@ public class RedisRepositoryImpl implements RedisRepository {
     public void publishToWsChannel(Long sessionId, Object message) {
         redisTemplate.convertAndSend(
                 RedisKeyManager.wsChannel(sessionId),
-                message
+                message  // 🔥 객체 그대로
         );
     }
 }

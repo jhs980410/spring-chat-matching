@@ -4,6 +4,7 @@ package com.chatmatchingservice.springchatmatching.domain.chat.controller;
 import com.chatmatchingservice.springchatmatching.domain.chat.service.message.MessageHandler;
 import com.chatmatchingservice.springchatmatching.domain.chat.websocket.MessageFactory;
 
+import com.chatmatchingservice.springchatmatching.global.auth.ChatPrincipal;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisPublisher;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
@@ -26,7 +27,6 @@ public class ChatStompController {
     private final RedisPublisher redisPublisher;
     private final MessageFactory messageFactory;
     private final RedisRepository redisRepository;
-
     @MessageMapping("/session/{sessionId}")
     public void sendMessage(@DestinationVariable String sessionId,
                             @Payload WSMessage message,
@@ -44,19 +44,19 @@ public class ChatStompController {
                 return;
             }
 
-            // 🔹 Principal → senderId / senderType 세팅
-            Authentication auth = (Authentication) principal;
-            Long senderId = (Long) auth.getPrincipal();  // JwtTokenProvider 에서 userId를 principal 로 넣었음
+            // 🔥 핵심: Authentication 으로 캐스팅 금지
+            if (!(principal instanceof ChatPrincipal chatPrincipal)) {
+                log.error("[WS] principal은 ChatPrincipal 이어야 함. 실제={}", principal.getClass());
+                return;
+            }
 
-            String role = auth.getAuthorities().stream()
-                    .findFirst()
-                    .map(a -> a.getAuthority().replace("ROLE_", "")) // ROLE_USER → USER
-                    .orElse("USER");
+            Long senderId = chatPrincipal.getId();      // principal.getName() 대신 우리 ID 사용
+            String role = chatPrincipal.getRole();      // USER / COUNSELOR
 
             WSMessage enriched = new WSMessage(
                     message.getType(),
                     sessionId,
-                    role,                       // senderType (USER / COUNSELOR)
+                    role,
                     senderId,
                     message.getMessage(),
                     message.getTimestamp() != null
@@ -64,11 +64,11 @@ public class ChatStompController {
                             : Instant.now().toEpochMilli()
             );
 
-            // 1) Command / Handler 실행
+            // 핸들러 실행
             MessageHandler handler = messageFactory.getHandler(enriched);
             handler.handle(enriched);
 
-            // 2) Redis Pub/Sub 브로드캐스트
+            // Redis pub/sub
             String channel = redisRepository.wsChannel(Long.valueOf(sessionId));
             redisPublisher.publish(channel, enriched);
 
@@ -76,4 +76,5 @@ public class ChatStompController {
             log.error("[WS] sendMessage 처리 중 예외: {}", e.getMessage(), e);
         }
     }
+
 }

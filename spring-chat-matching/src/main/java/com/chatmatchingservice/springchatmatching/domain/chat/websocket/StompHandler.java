@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.security.Principal;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -39,13 +40,14 @@ public class StompHandler implements ChannelInterceptor {
             switch (command) {
                 case CONNECT -> handleConnect(accessor);
                 case SUBSCRIBE -> handleSubscribe(accessor);
+                case SEND -> handleSend(accessor);         // ⭐ 추가된 라인
                 case DISCONNECT -> handleDisconnect(accessor);
             }
 
         } catch (CustomException e) {
             log.error("[WS][StompHandler] {} CustomException: code={}, msg={}",
                     command, e.getErrorCode().getCode(), e.getMessage());
-            throw e; // WebSocket 연결 즉시 종료
+            throw e;
 
         } catch (Exception e) {
             log.error("[WS][StompHandler] {} 처리 중 예상치 못한 예외: {}",
@@ -77,7 +79,7 @@ public class StompHandler implements ChannelInterceptor {
         String role = authentication.getAuthorities()
                 .iterator()
                 .next()
-                .getAuthority(); // ROLE_USER, ROLE_COUNSELOR
+                .getAuthority();
 
         if (role.startsWith("ROLE_")) {
             role = role.substring(5);
@@ -91,9 +93,20 @@ public class StompHandler implements ChannelInterceptor {
         }
 
         ChatPrincipal principal = new ChatPrincipal(id, role);
+
+        // 프레임에 User 세팅
         accessor.setUser(principal);
-        accessor.setLeaveMutable(true);   //  프레임 유지
-        log.info("[WS] CONNECT 성공: principalId={}, role={}", id, role);
+
+        // 세션에도 저장
+        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            sessionAttributes.put("WS_PRINCIPAL", principal);
+        }
+
+        accessor.setLeaveMutable(true);
+
+        log.info("[WS] CONNECT 성공: sessionId={}, principalId={}, role={}",
+                accessor.getSessionId(), id, role);
     }
 
     // =====================================================
@@ -101,7 +114,11 @@ public class StompHandler implements ChannelInterceptor {
     // =====================================================
     private void handleSubscribe(StompHeaderAccessor accessor) {
 
+        Principal principal = restorePrincipal(accessor, StompCommand.SUBSCRIBE);
+
         String destination = accessor.getDestination();
+        log.info("[FRAME] {} / sessionId={}, principal={}",
+                accessor.getCommand(), accessor.getSessionId(), principal);
 
         if (!StringUtils.hasText(destination)) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
@@ -110,8 +127,6 @@ public class StompHandler implements ChannelInterceptor {
         if (!destination.startsWith("/sub/session/")) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
-
-        Principal principal = accessor.getUser();
 
         if (!(principal instanceof ChatPrincipal chatPrincipal)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
@@ -127,14 +142,12 @@ public class StompHandler implements ChannelInterceptor {
 
         String role = chatPrincipal.getRole();
 
-        // USER → 본인 세션만 구독 허용
         if ("USER".equals(role)) {
             if (!session.getUserId().equals(chatPrincipal.getId())) {
                 throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
             }
         }
 
-        // COUNSELOR → assigned 된 세션만 허용
         if ("COUNSELOR".equals(role)) {
             if (session.getCounselorId() == null ||
                     !session.getCounselorId().equals(chatPrincipal.getId())) {
@@ -147,14 +160,53 @@ public class StompHandler implements ChannelInterceptor {
     }
 
     // =====================================================
+    // SEND — principal 복원 (핵심)
+    // =====================================================
+    private void handleSend(StompHeaderAccessor accessor) {
+
+        Principal principal = restorePrincipal(accessor, StompCommand.SEND);
+
+        if (principal == null) {
+            log.warn("[WS] SEND 프레임 principal 없음: sessionId={}", accessor.getSessionId());
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
+        }
+
+        log.info("[WS] SEND principal OK: sessionId={}, principal={}",
+                accessor.getSessionId(), principal.getName());
+    }
+
+    // =====================================================
     // DISCONNECT
     // =====================================================
     private void handleDisconnect(StompHeaderAccessor accessor) {
         Principal principal = accessor.getUser();
-        log.info("[WS] DISCONNECT: principal={}",
+        log.info("[WS] DISCONNECT: sessionId={}, principal={}",
+                accessor.getSessionId(),
                 principal != null ? principal.getName() : "null");
     }
 
+    // =====================================================
+    // 공통 principal 복원 로직
+    // =====================================================
+    private Principal restorePrincipal(StompHeaderAccessor accessor, StompCommand cmd) {
+
+        Principal principal = accessor.getUser();
+
+        if (principal == null) {
+            Map<String, Object> attrs = accessor.getSessionAttributes();
+            if (attrs != null) {
+                Object saved = attrs.get("WS_PRINCIPAL");
+                if (saved instanceof Principal) {
+                    principal = (Principal) saved;
+                    accessor.setUser(principal);
+                    log.info("[WS] {} 시 principal 복원: sessionId={}, principal={}",
+                            cmd, accessor.getSessionId(), principal.getName());
+                }
+            }
+        }
+
+        return principal;
+    }
 
     private Long parseSessionId(String dest) {
         try {

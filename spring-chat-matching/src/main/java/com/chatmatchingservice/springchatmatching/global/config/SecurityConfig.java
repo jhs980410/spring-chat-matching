@@ -48,6 +48,10 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/ws/connect").permitAll()
 
+                        // ===== 정적 HTML 허용 =====
+                        .requestMatchers("/user.html", "/counselor.html","ws-test.html").permitAll()
+                        .requestMatchers("/favicon.ico").permitAll()
+
                         // Swagger 허용
                         .requestMatchers(
                                 "/swagger-ui.html",

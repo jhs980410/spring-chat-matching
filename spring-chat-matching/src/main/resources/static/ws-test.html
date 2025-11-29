@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket STOMP 통합 테스트</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .client-box {
+            border: 2px solid #888;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+        .title-user { color: #007bff; }
+        .title-counselor { color: #d9534f; }
+        input, button, textarea { margin: 6px; padding: 8px; }
+        textarea { width: 380px; height: 120px; }
+        .log {
+            width: 100%; height: 200px; border: 1px solid #ccc;
+            padding: 8px; overflow:auto; white-space:pre-wrap;
+            background: #fafafa;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🔵 WebSocket STOMP 통합 테스트 페이지</h1>
+<hr/>
+
+<!-- ================================================================
+     USER CLIENT
+================================================================ -->
+<div class="client-box">
+    <h2 class="title-user">🟦 USER</h2>
+
+    <label>USER Access Token</label><br/>
+    <input type="text" id="userToken" style="width: 500px;"><br/>
+
+    <button onclick="connectWS('user')">CONNECT</button>
+    <button onclick="disconnectWS('user')">DISCONNECT</button>
+
+    <h4>SUBSCRIBE</h4>
+    <input type="text" id="userSub" placeholder="/sub/session/16" disabled>
+    <button onclick="subscribeWS('user')" id="userSubBtn" disabled>SUBSCRIBE</button>
+
+    <h4>SEND</h4>
+    <input type="text" id="userSendDest" value="/pub/session/16" style="width: 300px;"><br/>
+
+    <textarea id="userMsg">{
+  "type": "MESSAGE",
+  "sessionId": "16",
+  "message": "안녕하세요 (from USER)"
+}</textarea>
+
+    <br/><button onclick="sendWS('user')">SEND</button>
+
+    <h4>📜 USER LOG</h4>
+    <div id="userLog" class="log"></div>
+</div>
+
+
+<!-- ================================================================
+     COUNSELOR CLIENT
+================================================================ -->
+<div class="client-box">
+    <h2 class="title-counselor">🟥 COUNSELOR</h2>
+
+    <label>COUNSELOR Access Token</label><br/>
+    <input type="text" id="counToken" style="width: 500px;"><br/>
+
+    <button onclick="connectWS('coun')">CONNECT</button>
+    <button onclick="disconnectWS('coun')">DISCONNECT</button>
+
+    <h4>SUBSCRIBE</h4>
+    <input type="text" id="counSub" placeholder="/sub/session/16" disabled>
+    <button onclick="subscribeWS('coun')" id="counSubBtn" disabled>SUBSCRIBE</button>
+
+    <h4>SEND</h4>
+    <input type="text" id="counSendDest" value="/pub/session/16" style="width: 300px;"><br/>
+
+    <textarea id="counMsg">{
+  "type": "MESSAGE",
+  "sessionId": "16",
+  "message": "안녕하세요 (from COUNSELOR)"
+}</textarea>
+
+    <br/><button onclick="sendWS('coun')">SEND</button>
+
+    <h4>📜 COUNSELOR LOG</h4>
+    <div id="counLog" class="log"></div>
+</div>
+
+
+<script>
+
+    // 객체로 분리하여 각 클라이언트 독립 동작
+    const clients = {
+        user: { stomp: null, connected: false, subscribed: false },
+        coun: { stomp: null, connected: false, subscribed: false }
+    };
+
+    function log(type, msg) {
+        const box = document.getElementById(type + "Log");
+        box.innerHTML += msg + "\n";
+    }
+
+    // ================================================================
+    // CONNECT
+    // ================================================================
+    function connectWS(type) {
+
+        log(type, "CONNECT 시도중...");
+
+        const client = clients[type];
+        const token = document.getElementById(type + "Token").value;
+
+        client.stomp = Stomp.client("ws://localhost:8080/ws/connect");
+        client.stomp.reconnect_delay = 0; // 자동 reconnect 제거
+
+        client.stomp.connect(
+            { Authorization: "Bearer " + token },
+
+            frame => {
+                client.connected = true;
+                log(type, "✔ CONNECT 성공:\n" + frame);
+
+                document.getElementById(type + "Sub").disabled = false;
+                document.getElementById(type + "SubBtn").disabled = false;
+            },
+
+            error => log(type, "❌ CONNECT 에러:\n" + error)
+        );
+    }
+
+
+    // ================================================================
+    // SUBSCRIBE (중복 방지)
+    // ================================================================
+    function subscribeWS(type) {
+        const client = clients[type];
+
+        if (!client.connected) return log(type, "❌ CONNECT 먼저 하세요");
+        if (client.subscribed) return log(type, "⚠ 이미 SUBSCRIBE 상태");
+
+        const dest = document.getElementById(type + "Sub").value;
+
+        client.stomp.subscribe(dest, msg => {
+            log(type, "📩 수신: " + msg.body);
+        });
+
+        client.subscribed = true;
+        log(type, "🔔 SUBSCRIBE → " + dest);
+    }
+
+    // ================================================================
+    // SEND MESSAGE
+    // ================================================================
+    function sendWS(type) {
+        const client = clients[type];
+
+        if (!client.connected)
+            return log(type, "❌ SEND 불가: CONNECT 필요");
+
+        const dest = document.getElementById(type + "SendDest").value;
+        const body = document.getElementById(type + "Msg").value;
+
+        client.stomp.send(dest, {}, body);
+        log(type, "📤 SEND: " + body);
+    }
+
+
+    // ================================================================
+    // DISCONNECT
+    // ================================================================
+    function disconnectWS(type) {
+        const client = clients[type];
+
+        if (client.stomp) {
+            client.stomp.disconnect();
+            client.connected = false;
+            client.subscribed = false;
+
+            log(type, "🔌 DISCONNECT 완료");
+
+            document.getElementById(type + "Sub").disabled = true;
+            document.getElementById(type + "SubBtn").disabled = true;
+        }
+    }
+
+</script>
+
+</body>
+</html>

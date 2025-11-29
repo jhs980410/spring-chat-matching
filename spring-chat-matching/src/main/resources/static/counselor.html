@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>COUNSELOR WebSocket Test</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, button { margin: 6px; padding: 8px; }
+    #log { width: 100%; height: 300px; border: 1px solid #ccc;
+      padding: 8px; overflow:auto; white-space:pre-wrap; }
+  </style>
+</head>
+
+<body>
+
+<h2>🟥 COUNSELOR WebSocket STOMP 테스트</h2>
+
+<label>COUNSELOR Access Token:</label><br/>
+<input type="text" id="token" style="width: 500px;"><br/>
+
+<button onclick="connectWS()">CONNECT</button>
+<button onclick="disconnectWS()">DISCONNECT</button>
+
+<h4>SUBSCRIBE</h4>
+<input type="text" id="subDest" placeholder="/sub/session/10" style="width: 300px;" disabled>
+<button onclick="subscribeWS()" id="subBtn" disabled>SUBSCRIBE</button>
+
+<h4>SEND MESSAGE</h4>
+<input type="text" id="sendDest" value="/pub/session/10" style="width: 300px;"><br/>
+
+<textarea id="msg" style="width: 300px; height: 120px;">
+{
+  "type": "MESSAGE",
+  "sessionId": "10",
+  "message": "안녕하세요 (from COUNSELOR)"
+}
+</textarea><br/>
+<button onclick="sendWS()">SEND</button>
+
+<h3>📜 로그</h3>
+<div id="log"></div>
+
+<script>
+
+  let stompClient = null;
+  let connected = false;
+  let subscribed = false;  // ⭐ 중복 subscribe 방지 플래그
+
+  function log(msg) {
+    document.getElementById('log').innerHTML += msg + "\n";
+  }
+
+  function connectWS() {
+    log("CONNECT 시도중...");
+
+    // ⭐ 자동 reconnect 제거 — WebSocket 직접 사용
+    stompClient = Stomp.client("ws://localhost:8080/ws/connect");
+    stompClient.reconnect_delay = 0; // ⭐ 자동 재연결 완전 비활성화
+
+    const token = document.getElementById('token').value;
+
+    stompClient.connect(
+            { Authorization: "Bearer " + token },
+
+            frame => {
+              connected = true;
+              log("✔ CONNECT 성공:\n" + frame);
+
+              document.getElementById('subDest').disabled = false;
+              document.getElementById('subBtn').disabled = false;
+            },
+
+            error => log("❌ CONNECT 에러:\n" + error)
+    );
+  }
+
+  function subscribeWS() {
+    if (!connected) {
+      log("❌ ERROR: CONNECT가 완료되지 않았습니다.");
+      return;
+    }
+    if (subscribed) {
+      log("⚠ 이미 SUBSCRIBE 되어 있음 — 중복 방지");
+      return;
+    }
+
+    const dest = document.getElementById('subDest').value;
+
+    stompClient.subscribe(dest, msg => {
+      log("📩 수신: " + msg.body);
+    });
+
+    subscribed = true;  // ⭐ 구독 1회만 허용
+    log("🔔 SUBSCRIBE 요청: " + dest);
+  }
+
+  function sendWS() {
+    if (!connected) {
+      log("❌ SEND 불가: WebSocket이 아직 연결되지 않았습니다.");
+      return;
+    }
+
+    const dest = document.getElementById('sendDest').value;
+    const body = document.getElementById('msg').value;
+
+    stompClient.send(dest, {}, body);
+
+    log("📤 SEND: " + body);
+  }
+
+  function disconnectWS() {
+    if (stompClient) {
+      stompClient.disconnect();
+      connected = false;
+      subscribed = false;   // ⭐ 다시 구독 가능하도록 초기화
+
+      log("🔌 DISCONNECT 완료");
+
+      document.getElementById('subDest').disabled = true;
+      document.getElementById('subBtn').disabled = true;
+    }
+  }
+
+</script>
+</body>
+</html>

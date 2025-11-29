@@ -3,10 +3,12 @@ package com.chatmatchingservice.springchatmatching.infra.redis;
 import com.chatmatchingservice.springchatmatching.domain.chat.service.message.MessageHandler;
 import com.chatmatchingservice.springchatmatching.domain.chat.websocket.MessageFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
@@ -23,25 +25,24 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class RedisSubscriber implements MessageListener {
 
-    private final MessageFactory messageFactory;       //  추가
+    private final RedisTemplate<String, Object> redisTemplate;
     private final SimpMessagingTemplate messagingTemplate;
-    private final ObjectMapper objectMapper;
-
+    @PostConstruct
+    public void init() {
+        log.warn("🔥 RedisSubscriber Bean 생성됨!");
+    }
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
-            String json = new String(message.getBody(), StandardCharsets.UTF_8);
-            WSMessage payload = objectMapper.readValue(json, WSMessage.class);
+            // 🔥 RedisTemplate의 ValueSerializer로 역직렬화
+            Object deserialized = redisTemplate.getValueSerializer()
+                    .deserialize(message.getBody());
 
-            // ⭐ 내부 로직 처리 (핸들러 패턴)
-            try {
-                MessageHandler handler = messageFactory.getHandler(payload);
-                handler.handle(payload);
-            } catch (Exception e) {
-                log.error("[WS][Subscriber] Handler 처리 실패: {}", e.getMessage());
+            if (!(deserialized instanceof WSMessage payload)) {
+                log.error("[RedisSubscriber] 역직렬화 실패: payload 타입이 WSMessage가 아님: {}", deserialized);
+                return;
             }
 
-            // 기존 STOMP 브로드캐스트
             String dest = "/sub/session/" + payload.getSessionId();
             messagingTemplate.convertAndSend(dest, payload);
 

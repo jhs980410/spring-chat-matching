@@ -6,8 +6,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Observer 패턴에서 Subject 역할
- * - 특정 채널에 메시지를 발행(publish)
+ * Redis Pub/Sub Publisher
  */
 @Component
 @RequiredArgsConstructor
@@ -18,7 +17,9 @@ public class RedisPublisher {
 
     public void publish(String channel, Object message) {
         try {
+            // 🔥 객체 자체를 그대로 Redis Pub/Sub 으로 보냄
             redisTemplate.convertAndSend(channel, message);
+
         } catch (Exception e) {
             log.error("[RedisPublisher] publish 실패: channel={}, error={}", channel, e.getMessage(), e);
         }
