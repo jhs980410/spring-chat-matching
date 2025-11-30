@@ -20,6 +20,7 @@ public abstract class EndSessionTemplate {
      * Template Method
      */
     public final void endSession(Long sessionId, Long counselorId) {
+        log.info("▶▶ endSession START: sessionId={}, counselorId={}", sessionId, counselorId);
 
         // 1) 검증
         ChatSession session = validateSession(sessionId, counselorId);
@@ -60,19 +61,47 @@ public abstract class EndSessionTemplate {
      */
     private ChatSession validateSession(Long sessionId, Long counselorId) {
 
+        if (sessionId == null || counselorId == null) {
+            log.error("[Validate][FAIL] 기본 파라미터 null: sessionId={}, counselorId={}",
+                    sessionId, counselorId);
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+
         ChatSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.error("[Validate][FAIL] sessionId={} → SESSION_NOT_FOUND", sessionId);
+                    return new CustomException(ErrorCode.SESSION_NOT_FOUND);
+                });
+
+        // 상담사 ID null 체크 (DB 문제 대비)
+        if (session.getCounselorId() == null) {
+            log.error("[Validate][FAIL] DB에 counselorId=null → sessionId={}", sessionId);
+            throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
+        }
 
         // 상담사 불일치
         if (!counselorId.equals(session.getCounselorId())) {
+            log.error("[Validate][FAIL] counselorId 불일치. 요청자={}, 실제={}",
+                    counselorId, session.getCounselorId());
             throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
+        }
+
+        // 상태 null 방지
+        if (session.getStatus() == null) {
+            log.error("[Validate][FAIL] sessionId={} status=null (DB 비정상)", sessionId);
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         // 이미 종료된 세션
         if (session.getStatus() == SessionStatus.ENDED ||
                 session.getStatus() == SessionStatus.CANCELLED) {
+            log.warn("[Validate][FAIL] 이미 종료된 세션: sessionId={}, status={}",
+                    sessionId, session.getStatus());
             throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
         }
+
+        log.info("[Validate][SUCCESS] sessionId={} counselorId={} status={}",
+                sessionId, counselorId, session.getStatus());
 
         return session;
     }
@@ -94,13 +123,39 @@ public abstract class EndSessionTemplate {
     /**
      * 3) 상담사 load 감소
      */
+    /**
+     * 3) 상담사 load 감소 (안정화 버전)
+     */
     protected void decreaseLoad(Long counselorId) {
         try {
-            redisRepository.incrementCounselorLoad(counselorId, -1);
+            // load -1 감소 수행
+            Long newLoad = redisRepository.incrementCounselorLoad(counselorId, -1);
+
+            // Redis 키가 없었거나 null이면 0으로 초기화
+            if (newLoad == null) {
+                log.warn("[EndSession] counselorId={} load 키 없음 → 0으로 초기화", counselorId);
+                redisRepository.setCounselorLoad(counselorId, 0L);
+                return;
+            }
+
+            // 음수로 내려갔으면 안전하게 0으로 보정
+            if (newLoad < 0) {
+                log.warn("[EndSession] counselorId={} load 음수({}) → 0으로 보정", counselorId, newLoad);
+                redisRepository.setCounselorLoad(counselorId, 0L);
+            }
+
+        } catch (CustomException e) {
+            // 이미 정의된 CustomException이면 그대로 던짐
+            log.error("[EndSession] decreaseLoad CustomException: {}", e.getErrorCode().getCode());
+            throw e;
+
         } catch (Exception e) {
+            // Redis 문제 등 예상못한 예외만 서버오류 처리
+            log.error("[EndSession] decreaseLoad 처리 중 예외: {}", e.getMessage(), e);
             throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
+
 
 
     /**

@@ -1,11 +1,13 @@
 package com.chatmatchingservice.springchatmatching.domain.chat.websocket;
 
+import com.chatmatchingservice.springchatmatching.domain.chat.dto.DisconnectNotice;
 import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatSession;
 import com.chatmatchingservice.springchatmatching.domain.chat.repository.ChatSessionRepository;
 import com.chatmatchingservice.springchatmatching.global.auth.ChatPrincipal;
 import com.chatmatchingservice.springchatmatching.global.auth.jwt.JwtTokenProvider;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
@@ -27,6 +29,7 @@ public class StompHandler implements ChannelInterceptor {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final ChatSessionRepository chatSessionRepository;
+    private final RedisRepository redisRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -179,11 +182,41 @@ public class StompHandler implements ChannelInterceptor {
     // DISCONNECT
     // =====================================================
     private void handleDisconnect(StompHeaderAccessor accessor) {
-        Principal principal = accessor.getUser();
-        log.info("[WS] DISCONNECT: sessionId={}, principal={}",
-                accessor.getSessionId(),
-                principal != null ? principal.getName() : "null");
+
+        Principal principal = restorePrincipal(accessor, StompCommand.DISCONNECT);
+        String wsSessionId = accessor.getSessionId();
+
+        log.info("[WS] DISCONNECT 감지: wsSessionId={}, principal={}",
+                wsSessionId, principal);
+
+        if (!(principal instanceof ChatPrincipal chatPrincipal)) {
+            return; // 웹소켓 연결만 하고 SUBSCRIBE 안 한 경우
+        }
+
+        Long userId = chatPrincipal.getId();
+        String role = chatPrincipal.getRole();
+
+        // 1) 고객만 disconnect 감지 처리 (상담사는 무시)
+        if ("USER".equals(role)) {
+
+            // 🔥 Redis에 disconnect timestamp 저장
+            redisRepository.setUserDisconnectTime(userId, System.currentTimeMillis());
+
+            // 해당 유저가 참여한 세션 ID 조회
+            Long sessionId = redisRepository.getActiveSessionIdByUser(userId);
+            if (sessionId != null) {
+
+                // 상담사에게 “유저 이탈” 이벤트 발행
+                DisconnectNotice notice = DisconnectNotice.of(sessionId, userId);
+
+                redisRepository.publishToWsChannel(sessionId, notice);
+
+                log.warn("[WS] USER disconnect → 상담사에게 전달 완료: sessionId={}, userId={}",
+                        sessionId, userId);
+            }
+        }
     }
+
 
     // =====================================================
     // 공통 principal 복원 로직

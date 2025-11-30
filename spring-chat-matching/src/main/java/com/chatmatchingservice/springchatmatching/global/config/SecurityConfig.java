@@ -49,13 +49,14 @@ public class SecurityConfig {
                         .requestMatchers("/ws/connect").permitAll()
 
                         // ===== 정적 HTML 허용 =====
-                        .requestMatchers("/user.html", "/counselor.html","ws-test.html").permitAll()
+                        .requestMatchers("/user.html", "/counselor.html","ws-test.html","custom.html").permitAll()
                         .requestMatchers("/favicon.ico").permitAll()
 
                         // Swagger 허용
                         .requestMatchers(
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
+                                "/my-swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/swagger-resources",

@@ -28,8 +28,9 @@
 
 <body>
 
-<h1>🔵 WebSocket STOMP 통합 테스트 페이지</h1>
+<h1>🔵 WebSocket STOMP 통합 테스트 페이지 (Authorization 자동 제거 버전)</h1>
 <hr/>
+
 
 <!-- ================================================================
      USER CLIENT
@@ -37,14 +38,15 @@
 <div class="client-box">
     <h2 class="title-user">🟦 USER</h2>
 
-    <label>USER Access Token</label><br/>
+    <label>USER Access Token (비워두면 Authorization 안 보냄)</label><br/>
     <input type="text" id="userToken" style="width: 500px;"><br/>
 
     <button onclick="connectWS('user')">CONNECT</button>
     <button onclick="disconnectWS('user')">DISCONNECT</button>
+    <button onclick="sendEnd('user')" style="background:#ff4444;color:white;">END</button>
 
     <h4>SUBSCRIBE</h4>
-    <input type="text" id="userSub" placeholder="/sub/session/16" disabled>
+    <input type="text" id="userSub" value="/sub/session/16" disabled>
     <button onclick="subscribeWS('user')" id="userSubBtn" disabled>SUBSCRIBE</button>
 
     <h4>SEND</h4>
@@ -63,20 +65,23 @@
 </div>
 
 
+
+
 <!-- ================================================================
      COUNSELOR CLIENT
 ================================================================ -->
 <div class="client-box">
     <h2 class="title-counselor">🟥 COUNSELOR</h2>
 
-    <label>COUNSELOR Access Token</label><br/>
+    <label>COUNSELOR Access Token (비워두면 Authorization 안 보냄)</label><br/>
     <input type="text" id="counToken" style="width: 500px;"><br/>
 
     <button onclick="connectWS('coun')">CONNECT</button>
     <button onclick="disconnectWS('coun')">DISCONNECT</button>
+    <button onclick="sendEnd('coun')" style="background:#ff4444;color:white;">END</button>
 
     <h4>SUBSCRIBE</h4>
-    <input type="text" id="counSub" placeholder="/sub/session/16" disabled>
+    <input type="text" id="counSub" value="/sub/session/16" disabled>
     <button onclick="subscribeWS('coun')" id="counSubBtn" disabled>SUBSCRIBE</button>
 
     <h4>SEND</h4>
@@ -95,9 +100,11 @@
 </div>
 
 
+
+
 <script>
 
-    // 객체로 분리하여 각 클라이언트 독립 동작
+    // 각 WS 클라이언트 상태
     const clients = {
         user: { stomp: null, connected: false, subscribed: false },
         coun: { stomp: null, connected: false, subscribed: false }
@@ -108,22 +115,29 @@
         box.innerHTML += msg + "\n";
     }
 
+
+
     // ================================================================
-    // CONNECT
+    // CONNECT (Authorization 자동 제거)
     // ================================================================
     function connectWS(type) {
 
         log(type, "CONNECT 시도중...");
 
         const client = clients[type];
-        const token = document.getElementById(type + "Token").value;
+        const token = document.getElementById(type + "Token").value.trim();
 
         client.stomp = Stomp.client("ws://localhost:8080/ws/connect");
-        client.stomp.reconnect_delay = 0; // 자동 reconnect 제거
+        client.stomp.reconnect_delay = 0;
+
+        // 🔥 헤더 조건부 추가
+        let headers = {};
+        if (token.length > 0) {
+            headers.Authorization = "Bearer " + token;
+        }
 
         client.stomp.connect(
-            { Authorization: "Bearer " + token },
-
+            headers,
             frame => {
                 client.connected = true;
                 log(type, "✔ CONNECT 성공:\n" + frame);
@@ -131,14 +145,14 @@
                 document.getElementById(type + "Sub").disabled = false;
                 document.getElementById(type + "SubBtn").disabled = false;
             },
-
             error => log(type, "❌ CONNECT 에러:\n" + error)
         );
     }
 
 
+
     // ================================================================
-    // SUBSCRIBE (중복 방지)
+    // SUBSCRIBE
     // ================================================================
     function subscribeWS(type) {
         const client = clients[type];
@@ -155,6 +169,8 @@
         client.subscribed = true;
         log(type, "🔔 SUBSCRIBE → " + dest);
     }
+
+
 
     // ================================================================
     // SEND MESSAGE
@@ -173,6 +189,30 @@
     }
 
 
+
+    // ================================================================
+    // END (종료)
+    // ================================================================
+    function sendEnd(type) {
+        const client = clients[type];
+
+        if (!client.connected)
+            return log(type, "❌ END 불가: CONNECT 필요");
+
+        const dest = document.getElementById(type + "SendDest").value;
+        const sessionId = dest.split("/").pop();
+
+        const body = JSON.stringify({
+            type: "END",
+            sessionId: sessionId
+        });
+
+        client.stomp.send(dest, {}, body);
+        log(type, "🔴 END 전송: " + body);
+    }
+
+
+
     // ================================================================
     // DISCONNECT
     // ================================================================
@@ -180,11 +220,12 @@
         const client = clients[type];
 
         if (client.stomp) {
-            client.stomp.disconnect();
+            client.stomp.disconnect(() => {
+                log(type, "🔌 DISCONNECT 완료");
+            });
+
             client.connected = false;
             client.subscribed = false;
-
-            log(type, "🔌 DISCONNECT 완료");
 
             document.getElementById(type + "Sub").disabled = true;
             document.getElementById(type + "SubBtn").disabled = true;

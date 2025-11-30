@@ -25,7 +25,7 @@ public interface RedisRepository {
     // ================================
     void addCounselorToCategory(Long categoryId, Long counselorId);
     void removeCounselorFromCategory(Long categoryId, Long counselorId);
-    Set<Object> getCounselorsOfCategory(Long categoryId);
+    Set<String> getCounselorsOfCategory(Long categoryId);
 
     Long findWaitingSessionByUser(Long userId);
 
@@ -35,7 +35,7 @@ public interface RedisRepository {
     // ================================
     void enqueueSession(Long categoryId, Long sessionId);
     Long dequeueSession(Long categoryId);
-    List<Object> getQueueSnapshot(Long categoryId); // 디버깅용
+    List<String> getQueueSnapshot(Long categoryId); // 디버깅용
 
     // 🔥 추가: 특정 세션을 대기열에서 제거
     void removeFromQueue(Long categoryId, Long sessionId);
@@ -68,4 +68,10 @@ public interface RedisRepository {
     // ================================
     String wsChannel(Long sessionId);
     void publishToWsChannel(Long sessionId, Object message);
+    // 🔥 유저 disconnect 시간 기록
+    void setUserDisconnectTime(Long userId, long timestamp);
+    Long getUserDisconnectTime(Long userId);
+
+    // 🔥 유저의 현재 ACTIVE 세션 ID 조회
+    Long getActiveSessionIdByUser(Long userId);
 }

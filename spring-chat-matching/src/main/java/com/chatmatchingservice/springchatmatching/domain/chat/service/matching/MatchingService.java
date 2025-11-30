@@ -57,7 +57,7 @@ public class MatchingService {
             // -----------------------------------
             // 1) 카테고리 상담사 Set 조회
             // -----------------------------------
-            Set<Object> ids = redisRepository.getCounselorsOfCategory(categoryId);
+            Set<String> ids = redisRepository.getCounselorsOfCategory(categoryId);
 
             if (ids == null || ids.isEmpty()) {
                 log.debug("[Matching] categoryId={} 상담사 없음", categoryId);

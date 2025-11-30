@@ -83,16 +83,24 @@ public class ChatSessionService {
         validateNotFinished(session);
 
         // DB 처리 + Redis 처리
-        if (actorId.equals(session.getUserId())) {
-            // 사용자 종료
-            endSessionFacade.endByUser(sessionId, session.getUserId());
-        } else {
-            // 상담사 종료
-            endSessionFacade.endByCounselor(sessionId, session.getCounselorId());
+        try {
+            if (actorId.equals(session.getUserId())) {
+                endSessionFacade.endByUser(sessionId, session.getUserId());
+            } else {
+                endSessionFacade.endByCounselor(sessionId, session.getCounselorId());
+            }
+        } catch (Exception e) {
+            log.error("[END-ERROR] endSessionFacade ERROR", e);
+            throw e;
         }
-        // WebSocket 알림
-        eventService.sendEnd(sessionId, session.getCounselorId());
 
+        // WebSocket 알림
+        try {
+            eventService.sendEnd(sessionId, session.getCounselorId());
+        } catch (Exception e) {
+            log.error("[END-ERROR] eventService ERROR", e);
+            throw e;
+        }
         log.info("[Service] Session END: sessionId={}, by actorId={}", sessionId, actorId);
     }
 

@@ -48,4 +48,7 @@ public class RedisKeyManager {
     public static String wsChannel(Long sessionId) {
         return "ws:session:" + sessionId;
     }
+    public static String userDisconnectTime(Long userId) {
+        return "user:" + userId + ":disconnectTime";
+    }
 }
