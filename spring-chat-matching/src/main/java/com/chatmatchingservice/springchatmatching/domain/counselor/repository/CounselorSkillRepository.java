@@ -5,6 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface CounselorSkillRepository extends JpaRepository<CounselorSkill, Long> {
-    List<CounselorSkill> findByCounselorId(Long counselorId);
+
     List<CounselorSkill> findByCategoryId(Long categoryId);
+    List<CounselorSkill> findByCounselorId(Long counselorId);
+
+    boolean existsByCounselorIdAndCategoryId(Long counselorId, Long categoryId);
 }

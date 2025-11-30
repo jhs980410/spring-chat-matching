@@ -1,5 +1,6 @@
 package com.chatmatchingservice.springchatmatching.domain.counselor.service;
 
+import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselorSkillRequest;
 import com.chatmatchingservice.springchatmatching.domain.counselor.entity.CounselorSkill;
 import com.chatmatchingservice.springchatmatching.domain.counselor.repository.CounselorSkillRepository;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
@@ -20,15 +21,15 @@ public class CounselorSkillService {
     /**
      * 상담사의 상담 가능 카테고리 추가
      */
-    public void addSkill(Long counselorId, Long categoryId) {
+    public void addSkill(Long counselorId, CounselorSkillRequest req) {
         try {
             // 1) DB 저장
-            skillRepository.save(new CounselorSkill(counselorId, categoryId));
+            skillRepository.save(new CounselorSkill(counselorId, req.categoryId()));
 
             // 2) Redis SET 추가 (Repository 사용)
-            redisRepository.addCounselorToCategory(categoryId, counselorId);
+            redisRepository.addCounselorToCategory(req.categoryId(), counselorId);
 
-            log.info("[Skill] ADD: counselorId={}, categoryId={}", counselorId, categoryId);
+            log.info("[Skill] ADD: counselorId={}, categoryId={}", counselorId, req.categoryId());
 
         } catch (CustomException e) {
             throw e;
