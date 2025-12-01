@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+
+    /* Target */
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+
+    /* React / JSX */
+    "jsx": "react-jsx",
+
+    /* Module system */
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+
+    /* Output */
+    "noEmit": true,
+
+    /* Types */
+    "types": ["vite/client"],
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
+    "skipLibCheck": true,
+
+    /* Strict mode 조정 — WebSocket / STOMP any 경고 제거 */
+    "strict": true,
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+
+    /* Lint */
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,35 @@
+.timeline-box {
+  background: #f7f9fc;
+  padding: 16px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 좌측/우측 정렬 */
+.msg-line {
+  max-width: 70%;
+}
+
+.msg-line.left {
+  align-self: flex-start;
+}
+
+.msg-line.right {
+  align-self: flex-end;
+  text-align: right;
+}
+
+/* 말풍선 */
+.bubble {
+  padding: 10px 14px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+}
+
+.msg-line.right .bubble {
+  background: #e7f0ff;
+  border-color: #a3c2ff;
+}
