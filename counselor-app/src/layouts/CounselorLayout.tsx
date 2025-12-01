@@ -1,7 +1,7 @@
-import { AppShell, Group, Text, Button, Card, Grid } from "@mantine/core";
-import { useNavigate, useLocation } from "react-router-dom";
+import { AppShell, Group, Text, Button, NavLink } from "@mantine/core";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
-export default function CounselorLayout({ children }: { children: React.ReactNode }) {
+export default function CounselorLayout() {
   const nav = useNavigate();
   const location = useLocation();
 
@@ -10,10 +10,9 @@ export default function CounselorLayout({ children }: { children: React.ReactNod
   return (
     <AppShell
       header={{ height: 60 }}
-      navbar={{ width: 200, breakpoint: "sm" }}
+      navbar={{ width: 220, breakpoint: "sm" }}
       padding="md"
     >
-      {/* 상단바 */}
       <AppShell.Header>
         <Group
           justify="space-between"
@@ -36,120 +35,41 @@ export default function CounselorLayout({ children }: { children: React.ReactNod
         </Group>
       </AppShell.Header>
 
-      {/* 좌측 메뉴 */}
       <AppShell.Navbar p="md" bg="#F6F7FA">
-
-        <Button
-          variant={isActive("/dashboard") ? "filled" : "subtle"}
-          fullWidth
-          mb="xs"
-          styles={{
-            root: {
-              backgroundColor: isActive("/dashboard") ? "#e7f1ff" : "transparent",
-              fontWeight: isActive("/dashboard") ? 700 : 400,
-              color: "#1A4DBE",
-            },
-          }}
+        <NavLink
+          label="📊 대시보드"
+          active={isActive("/dashboard")}
           onClick={() => nav("/dashboard")}
-        >
-          📊 대시보드
-        </Button>
+        />
 
-        <Button
-          variant={isActive("/chat") ? "filled" : "subtle"}
-          fullWidth
-          mb="xs"
-          styles={{
-            root: {
-              backgroundColor: isActive("/chat") ? "#e7f1ff" : "transparent",
-              fontWeight: isActive("/chat") ? 700 : 400,
-              color: "#1A4DBE",
-            },
-          }}
+        <NavLink
+          label="💬 채팅 상담"
+          active={isActive("/chat")}
           onClick={() => nav("/chat/1")}
-        >
-          💬 채팅 상담
-        </Button>
+        />
 
-        <Button
-          variant={isActive("/sessions/history") ? "filled" : "subtle"}
-          fullWidth
-          mb="xs"
-          styles={{
-            root: {
-              backgroundColor: isActive("/sessions/history") ? "#e7f1ff" : "transparent",
-              fontWeight: isActive("/sessions/history") ? 700 : 400,
-              color: "#1A4DBE",
-            },
-          }}
-          onClick={() => nav("/sessions/history")}
-        >
-          📁 상담 내역 조회
-        </Button>
+        <NavLink
+          label="📁 상담 내역 조회"
+          active={isActive("/sessions")}
+          onClick={() => nav("/sessions")}
+        />
 
-        <Button
-          variant={isActive("/notices") ? "filled" : "subtle"}
-          fullWidth
-          mb="xs"
-          styles={{
-            root: {
-              backgroundColor: isActive("/notices") ? "#e7f1ff" : "transparent",
-              fontWeight: isActive("/notices") ? 700 : 400,
-              color: "#1A4DBE",
-            },
-          }}
+        <NavLink
+          label="📢 공지사항"
+          active={isActive("/notices")}
           onClick={() => nav("/notices")}
-        >
-          📢 공지사항
-        </Button>
+        />
 
-        <Button
-          variant={isActive("/profile") ? "filled" : "subtle"}
-          fullWidth
-          mb="xs"
-          styles={{
-            root: {
-              backgroundColor: isActive("/profile") ? "#e7f1ff" : "transparent",
-              fontWeight: isActive("/profile") ? 700 : 400,
-              color: "#1A4DBE",
-            },
-          }}
+        <NavLink
+          label="👤 내 정보 관리"
+          active={isActive("/profile")}
           onClick={() => nav("/profile")}
-        >
-          👤 내 정보 관리
-        </Button>
-
+        />
       </AppShell.Navbar>
 
-      {/* 메인 영역 */}
       <AppShell.Main>
-
-        {/* 🔵 상단 글로벌 대시보드 */}
-        <Grid mb="lg">
-          <Grid.Col span={4}>
-            <Card withBorder shadow="sm" p="md">
-              <Text fw={700}>오늘 상담 수</Text>
-              <Text size="xl">12</Text>
-            </Card>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <Card withBorder shadow="sm" p="md">
-              <Text fw={700}>대기 중</Text>
-              <Text size="xl">3</Text>
-            </Card>
-          </Grid.Col>
-
-          <Grid.Col span={4}>
-            <Card withBorder shadow="sm" p="md">
-              <Text fw={700}>평균 상담 시간</Text>
-              <Text size="xl">147초</Text>
-            </Card>
-          </Grid.Col>
-        </Grid>
-
-        {/* 페이지 내용 */}
-        {children}
+        {/* 🔥 children 대신 Outlet만 남긴다 */}
+        <Outlet />
       </AppShell.Main>
     </AppShell>
   );

@@ -1,0 +1,35 @@
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msg-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+
+.me {
+  align-self: flex-end;
+}
+
+.other {
+  align-self: flex-start;
+}
+
+.msg-bubble {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.me-bubble {
+  background: #d0ebff;
+  color: #003a66;
+}
+
+.other-bubble {
+  background: #f1f3f5;
+  color: #222;
+}

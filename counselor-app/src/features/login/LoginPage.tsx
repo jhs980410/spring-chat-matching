@@ -1,7 +1,7 @@
 import { Button, Card, TextInput, Title } from "@mantine/core";
 import { useState } from "react";
 import axios from "axios";
-import { useAuthStore } from "../stores/authStore";
+import { useAuthStore } from "../../stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 
