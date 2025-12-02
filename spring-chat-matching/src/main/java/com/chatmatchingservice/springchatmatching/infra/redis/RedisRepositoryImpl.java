@@ -307,12 +307,18 @@ public class RedisRepositoryImpl implements RedisRepository {
     //세션별 상태별 세션
 
     public long countByStatus(String status) {
-        Set<String> keys = redisTemplate.keys("session:*:status"); // 주의: PROD에서는 SCAN 방식 권장
+        // 키 조회
+        Set<String> keys = redisStringTemplate.keys("session:*:status");
+
+        if (keys == null || keys.isEmpty()) {
+            return 0;
+        }
+
+        // 값 조회도 redisStringTemplate으로
         return keys.stream()
-                .filter(key -> status.equals(redisTemplate.opsForValue().get(key)))
+                .filter(key -> status.equals(redisStringTemplate.opsForValue().get(key)))
                 .count();
     }
-
     // ==========================================
     // WebSocket Pub/Sub
     // ==========================================

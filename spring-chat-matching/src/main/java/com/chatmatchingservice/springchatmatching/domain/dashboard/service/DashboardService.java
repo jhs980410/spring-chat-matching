@@ -41,10 +41,13 @@ public class DashboardService {
     public DashboardStatusRatioResponse getStatusRatio() {
 
         long waiting = redisRepository.countByStatus("WAITING");
+        System.out.println("준비인원:" + waiting);
         long inProgress = redisRepository.countByStatus("IN_PROGRESS");
+        System.out.println("상담인원" + inProgress);
         long ended = redisRepository.countByStatus("ENDED");
+        System.out.println("종료" + ended);
         long afterCall = redisRepository.countByStatus("AFTER_CALL");
-
+        System.out.println("에프터" + afterCall);
         return DashboardStatusRatioResponse.builder()
                 .waiting(waiting)
                 .inProgress(inProgress)
@@ -61,14 +64,24 @@ public class DashboardService {
         List<Object[]> rows = chatSessionJpaRepository.findTodaySessionsRaw();
 
         return rows.stream()
-                .map(r -> TodaySessionResponse.builder()
-                        .sessionId(((Number) r[0]).longValue())
-                        .userName((String) r[1])
-                        .categoryName((String) r[2])
-                        .startedAt((LocalDateTime) r[3])
-                        .endedAt((LocalDateTime) r[4])
-                        .status((String) r[5])
-                        .build())
+                .map(r -> {
+                    // java.sql.Timestamp로 받아서 toLocalDateTime() 호출
+                    java.sql.Timestamp startedTimestamp = (java.sql.Timestamp) r[3];
+                    java.sql.Timestamp endedTimestamp = (java.sql.Timestamp) r[4];
+
+                    // Null 체크 추가: DB 컬럼이 NULLABLE일 경우 안전하게 처리
+                    LocalDateTime startedAt = (startedTimestamp != null) ? startedTimestamp.toLocalDateTime() : null;
+                    LocalDateTime endedAt = (endedTimestamp != null) ? endedTimestamp.toLocalDateTime() : null;
+
+                    return TodaySessionResponse.builder()
+                            .sessionId(((Number) r[0]).longValue())
+                            .userName((String) r[1])
+                            .categoryName((String) r[2])
+                            .startedAt(startedAt) // 변환된 LocalDateTime 사용
+                            .endedAt(endedAt)     // 변환된 LocalDateTime 사용
+                            .status((String) r[5])
+                            .build();
+                })
                 .toList();
     }
 }
