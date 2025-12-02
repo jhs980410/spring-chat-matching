@@ -115,25 +115,19 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // 인증 정보 (쿠키 등) 교환 허용
         config.setAllowCredentials(true);
 
-        // 허용할 출처 (프론트엔드 주소)
-        // **주의: 배포 시 "http://your-domain.com"을 실제 도메인으로 변경해야 합니다.**
-        config.addAllowedOrigin("http://localhost:5173");
-        config.addAllowedOrigin("http://127.0.0.1:5173");
-        // 모든 출처를 허용하려면 config.addAllowedOrigin("*"); 대신
-        // config.setAllowedOriginPatterns(List.of("*"));를 사용해야 합니다.
-        // 여기서는 명시된 로컬호스트만 허용합니다.
+        // 로컬 개발환경 모두 허용
+        config.addAllowedOriginPattern("http://localhost:*");
+        config.addAllowedOriginPattern("http://127.0.0.1:*");
 
-        // 모든 요청 헤더와 HTTP 메서드 허용
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 
-        // UrlBasedCorsConfigurationSource를 사용하여 모든 경로에 대해 위 설정을 적용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
 
         return source;
     }
+
 }
