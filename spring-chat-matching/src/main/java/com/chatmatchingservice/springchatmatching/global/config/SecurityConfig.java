@@ -58,11 +58,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
 
                         // WebSocket 핸드셰이크 허용
-                        .requestMatchers("/ws/**").permitAll()
-                        .requestMatchers("/ws/connect").permitAll() // 필요하다면 ws/connect 경로도 명시적으로 허용
+                        .requestMatchers("/ws/**", "/ws/connect").permitAll()
 
-                        // ===== 정적 HTML 허용 (프론트엔드 개발용) =====
-                        .requestMatchers("/user.html", "/counselor.html","ws-test.html","custom.html").permitAll()
+                        // 정적 HTML 허용
+                        .requestMatchers("/user.html", "/counselor.html", "ws-test.html", "custom.html").permitAll()
                         .requestMatchers("/favicon.ico").permitAll()
 
                         // Swagger 허용
@@ -76,9 +75,20 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
+                        // ============================
+                        // 🔥 상담사 전용 Dashboard API
+                        // ============================
+                        .requestMatchers("/api/dashboard/**").hasAnyRole("COUNSELOR", "ADMIN")
+
+                        // ============================
+                        // 🔥 통계 API는 관리자 or 상담사
+                        // ============================
+                        .requestMatchers("/api/stats/**").hasAnyRole("COUNSELOR", "ADMIN")
+
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )
+
 
                 // 4. JWT 필터 등록
                 // JWT 검증을 UsernamePasswordAuthenticationFilter 이전에 수행하도록 등록

@@ -14,4 +14,6 @@ public interface ChatSessionRepository {
     Optional<ChatSession> findById(Long sessionId);
     Optional<ChatSession> findActiveSessionByUser(Long userId);
     Optional<ChatSession> findActiveSessionByCounselor(Long counselorId);
+
+
 }

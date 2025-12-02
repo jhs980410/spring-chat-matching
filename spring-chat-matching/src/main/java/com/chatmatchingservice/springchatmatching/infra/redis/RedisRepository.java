@@ -74,4 +74,8 @@ public interface RedisRepository {
 
     // 🔥 유저의 현재 ACTIVE 세션 ID 조회
     Long getActiveSessionIdByUser(Long userId);
+
+
+   //"현재 상태별 세션 수".
+    long countByStatus(String status);
 }

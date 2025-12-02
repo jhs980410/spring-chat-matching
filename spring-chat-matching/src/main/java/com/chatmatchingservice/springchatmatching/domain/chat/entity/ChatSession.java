@@ -28,10 +28,26 @@ public class ChatSession {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    // 🔥 새로 추가되는 필드 (이미 스키마에 있음)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "end_reason")
+    private SessionEndReason endReason;  // 새 enum 필요함
 
-    // 🔥 추가: DB 스키마에 존재하는 started_at 컬럼
+    @Column(name = "requested_at")
+    private LocalDateTime requestedAt;
+
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
     @Column(name = "started_at")
     private LocalDateTime startedAt;
+
+    @Column(name = "ended_at")
+    private LocalDateTime endedAt;
+
+    @Column(name = "duration_sec")
+    private Integer durationSec;
+    // 🔥 추가: DB 스키마에 존재하는 started_at 컬럼
 
     // --- 생성 메서드 ---
     public static ChatSession createWaiting(Long userId, Long categoryId) {
