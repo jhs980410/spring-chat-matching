@@ -26,6 +26,7 @@ public class SecurityConfig {
     private final JwtUserDetailsService jwtUserDetailsService;
     private final JwtAccessDeniedHandler accessDeniedHandler;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
+    private final CookieUtil cookieUtil;
 
     /**
      * 최종 SecurityFilterChain 설정:
@@ -93,7 +94,8 @@ public class SecurityConfig {
                 // 4. JWT 필터 등록
                 // JWT 검증을 UsernamePasswordAuthenticationFilter 이전에 수행하도록 등록
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtTokenProvider),
+                        // ⬅️ 수정: JwtTokenProvider와 CookieUtil을 모두 전달합니다.
+                        new JwtAuthenticationFilter(jwtTokenProvider, cookieUtil),
                         UsernamePasswordAuthenticationFilter.class
                 );
 

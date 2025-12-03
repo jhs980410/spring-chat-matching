@@ -56,30 +56,22 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   // =========================
-  // 안전하게 data.data 접근하는 함수
-  // =========================
-  const safe = <T,>(res: any, fallback: T): T => {
-    if (!res || !res.data) return fallback;
-    return res.data.data ?? fallback; // 백엔드 Response<T> 구조 대응
-  };
-
-  // =========================
   // API 호출
   // =========================
   useEffect(() => {
     async function loadDashboard() {
       try {
         const [daily, load, ratio, today] = await Promise.all([
-          axios.get("/api/dashboard/stats/daily"),
-          axios.get("/api/dashboard/stats/counselor-load"),
-          axios.get("/api/dashboard/session/status-ratio"),
-          axios.get("/api/dashboard/session/today"),
+          axios.get("/api/stats/daily"),
+          axios.get("/api/stats/counselors/handled"),
+          axios.get("/api/dashboard/status-ratio"),
+          axios.get("/api/dashboard/sessions/today"),
         ]);
 
-        setDailyStats(safe<DailyStat[]>(daily, []));
-        setCounselorLoad(safe<CounselorLoad[]>(load, []));
-        setStatusRatio(safe<StatusRatio>(ratio, null));
-        setTodaySessions(safe<TodaySession[]>(today, []));
+        setDailyStats(daily.data);
+        setCounselorLoad(load.data);
+        setStatusRatio(ratio.data);
+        setTodaySessions(today.data);
       } catch (err) {
         console.error("대시보드 API 오류", err);
       } finally {
@@ -98,7 +90,7 @@ export default function DashboardPage() {
     );
 
   // =========================
-  // 데이터 가공 (undefined 방어 포함)
+  // 데이터 가공
   // =========================
 
   const totalHandled =
@@ -161,10 +153,10 @@ export default function DashboardPage() {
         <Title order={4} mb="md">📈 일자별 상담 건수</Title>
         <LineChart
           h={250}
-          data={dailyStats?.map((s) => ({
+          data={dailyStats.map((s) => ({
             date: s.statDate,
             count: s.handledCount,
-          })) ?? []}
+          }))}
           dataKey="date"
           series={[{ name: "count", label: "상담 수", color: "blue" }]}
           withLegend
@@ -176,10 +168,10 @@ export default function DashboardPage() {
         <Title order={4} mb="md">⏱ 평균 상담 시간</Title>
         <LineChart
           h={250}
-          data={dailyStats?.map((s) => ({
+          data={dailyStats.map((s) => ({
             date: s.statDate,
             duration: s.avgDurationSec,
-          })) ?? []}
+          }))}
           dataKey="date"
           series={[{ name: "duration", label: "평균 시간(초)", color: "green" }]}
           withLegend
@@ -192,12 +184,10 @@ export default function DashboardPage() {
 
         <BarChart
           h={250}
-          data={
-            counselorLoad?.map((c) => ({
-              counselor: c.counselorName,
-              count: c.handledCount,
-            })) ?? []
-          }
+          data={counselorLoad.map((c) => ({
+            counselor: c.counselorName,
+            count: c.handledCount,
+          }))}
           dataKey="counselor"
           series={[{ name: "count", label: "건수", color: "teal" }]}
           withLegend
@@ -228,7 +218,7 @@ export default function DashboardPage() {
           </Table.Thead>
 
           <Table.Tbody>
-            {(todaySessions ?? []).map((s) => (
+            {todaySessions.map((s) => (
               <Table.Tr key={s.id}>
                 <Table.Td>{s.userName}</Table.Td>
                 <Table.Td>{s.categoryName}</Table.Td>

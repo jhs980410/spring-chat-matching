@@ -1,9 +1,13 @@
 package com.chatmatchingservice.springchatmatching.global.auth.jwt;
 
 import com.chatmatchingservice.springchatmatching.auth.dto.AuthResponse;
+import jakarta.servlet.http.HttpServletRequest; // HttpServletRequest 임포트 추가
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie; // jakarta.servlet.http.Cookie 임포트 추가
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+
+import java.util.Arrays; // Arrays 임포트 추가
 
 @Component
 public class CookieUtil {
@@ -53,5 +57,32 @@ public class CookieUtil {
                 .path("/")            // 모든 경로에서 유효
                 .maxAge(maxAge)       // 유효 기간 설정
                 .build();
+    }
+
+    /**
+     * HttpServletRequest에서 ACCESS_TOKEN을 추출하여 반환합니다.
+     * JwtAuthenticationFilter에서 HttpOnly 쿠키를 읽기 위해 사용됩니다.
+     * @param request HttpServletRequest
+     * @return Access Token 문자열 또는 null
+     */
+    public String getAccessToken(HttpServletRequest request) {
+        return getTokenFromCookie(request, ACCESS_TOKEN_NAME);
+    }
+
+    /**
+     * 지정된 이름의 쿠키에서 값을 추출합니다.
+     */
+    private String getTokenFromCookie(HttpServletRequest request, String cookieName) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+
+        // 쿠키 배열을 스트림으로 변환하여 원하는 이름의 쿠키를 찾고 값을 반환
+        return Arrays.stream(cookies)
+                .filter(cookie -> cookie.getName().equals(cookieName))
+                .findFirst()
+                .map(Cookie::getValue)
+                .orElse(null);
     }
 }
