@@ -22,8 +22,9 @@ public interface ChatSessionJpaRepository extends JpaRepository<ChatSession, Lon
                     "FROM chat_session s " +
                     "JOIN app_user u ON s.user_id = u.id " +
                     "JOIN category c ON s.category_id = c.id " +
-                    "WHERE DATE(s.started_at) = CURDATE() " +
-                    "ORDER BY s.started_at ASC",
+                    "WHERE DATE(s.created_at) = CURDATE() " +
+                    "   OR DATE(s.started_at) = CURDATE() " +
+                    "ORDER BY s.created_at ASC",
             nativeQuery = true)
     List<Object[]> findTodaySessionsRaw();
 

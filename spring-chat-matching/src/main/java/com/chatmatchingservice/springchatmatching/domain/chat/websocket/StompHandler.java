@@ -152,9 +152,24 @@ public class StompHandler implements ChannelInterceptor {
         }
 
         if ("COUNSELOR".equals(role)) {
+            // 1. 상담사 권한 체크
             if (session.getCounselorId() == null ||
                     !session.getCounselorId().equals(chatPrincipal.getId())) {
                 throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
+            }
+
+            // 2.  시작 시간이 없는 경우에만 기록 시도 (중복 방지)
+            if (session.getStartedAt() == null) {
+                try {
+                    // ChatSessionRepositoryImpl -> Service (@Transactional)를 거쳐 DB에 저장
+                    chatSessionRepository.markSessionStarted(sessionId);
+                    log.info("[WS] 상담 시작 시간 기록 완료: sessionId={}, counselorId={}",
+                            sessionId, chatPrincipal.getId());
+                } catch (Exception e) {
+                    // DB 접근 실패 시에도 상담은 진행되도록 예외만 로깅
+                    log.error("[WS] started_at 저장 실패: sessionId={}, err={}",
+                            sessionId, e.getMessage());
+                }
             }
         }
 

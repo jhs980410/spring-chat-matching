@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -66,8 +67,8 @@ public class DashboardService {
         return rows.stream()
                 .map(r -> {
                     // java.sql.Timestamp로 받아서 toLocalDateTime() 호출
-                    java.sql.Timestamp startedTimestamp = (java.sql.Timestamp) r[3];
-                    java.sql.Timestamp endedTimestamp = (java.sql.Timestamp) r[4];
+                   Timestamp startedTimestamp = (java.sql.Timestamp) r[3];
+                   Timestamp endedTimestamp = (java.sql.Timestamp) r[4];
 
                     // Null 체크 추가: DB 컬럼이 NULLABLE일 경우 안전하게 처리
                     LocalDateTime startedAt = (startedTimestamp != null) ? startedTimestamp.toLocalDateTime() : null;

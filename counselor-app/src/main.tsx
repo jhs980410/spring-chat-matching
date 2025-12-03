@@ -10,12 +10,12 @@ import "@mantine/charts/styles.css";
 import App from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <MantineProvider defaultColorScheme="light">
       <Notifications position="top-right" />
       <BrowserRouter>
         <App />
       </BrowserRouter>
     </MantineProvider>
-  </React.StrictMode>
+  // </React.StrictMode>
 );

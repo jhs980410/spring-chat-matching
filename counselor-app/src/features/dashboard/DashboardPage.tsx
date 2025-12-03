@@ -40,11 +40,11 @@ interface StatusRatio {
 }
 
 interface TodaySession {
-  id: number;
+  sessionId: number;
   userName: string;
   categoryName: string;
-  start: string;
-  end: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
   status: string;
 }
 
@@ -219,11 +219,11 @@ export default function DashboardPage() {
 
           <Table.Tbody>
             {todaySessions.map((s) => (
-              <Table.Tr key={s.id}>
+              <Table.Tr key={s.sessionId}>
                 <Table.Td>{s.userName}</Table.Td>
                 <Table.Td>{s.categoryName}</Table.Td>
-                <Table.Td>{s.start}</Table.Td>
-                <Table.Td>{s.end ?? "-"}</Table.Td>
+                <Table.Td>{s.startedAt}</Table.Td>
+                <Table.Td>{s.endedAt ?? "-"}</Table.Td>
                 <Table.Td>
                   {s.status === "ENDED" ? (
                     <Badge color="green">완료</Badge>

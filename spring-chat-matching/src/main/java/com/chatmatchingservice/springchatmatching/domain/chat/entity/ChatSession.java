@@ -46,7 +46,7 @@ public class ChatSession {
     private LocalDateTime endedAt;
 
     @Column(name = "duration_sec")
-    private Integer durationSec;
+    private Long durationSec;
     // 🔥 추가: DB 스키마에 존재하는 started_at 컬럼
 
     // --- 생성 메서드 ---
