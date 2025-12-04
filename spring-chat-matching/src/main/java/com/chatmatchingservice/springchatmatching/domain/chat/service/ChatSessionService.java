@@ -1,6 +1,8 @@
 package com.chatmatchingservice.springchatmatching.domain.chat.service;
 
 import com.chatmatchingservice.springchatmatching.domain.chat.dto.ChatMessageResponse;
+import com.chatmatchingservice.springchatmatching.domain.chat.dto.SessionDetailResponse;
+import com.chatmatchingservice.springchatmatching.domain.chat.dto.SessionHistoryResponse;
 import com.chatmatchingservice.springchatmatching.domain.chat.dto.SessionInfoResponse;
 import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatMessage;
 import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatSession;
@@ -31,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -286,4 +289,77 @@ public class ChatSessionService {
             throw new CustomException(ErrorCode.SESSION_ALREADY_FINISHED);
         }
     }
+    public SessionDetailResponse getSessionDetail(Long sessionId, Long actorId) {
+
+        // 접근 권한 체크
+        getAndValidateSession(sessionId, actorId);
+
+        Object[] s = chatSessionRepository.findSessionDetail(sessionId);   // 단건
+        List<Object[]> m = chatSessionRepository.findMessages(sessionId);  // 메시지 리스트
+        Object[] a = chatSessionRepository.findAfterCall(sessionId);       // 단건 or null
+
+        return SessionDetailResponse.of(s, m, a);
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<SessionHistoryResponse> getHistoryOfCounselor(Long counselorId) {
+
+        List<Object[]> rows = chatSessionRepository.findHistoryOfCounselor(counselorId);
+
+        return rows.stream().map(r -> new SessionHistoryResponse(
+                toLong(r[0]),           // sessionId
+                toStringVal(r[1]),      // status
+
+                toLong(r[2]),           // userId
+                toStringVal(r[3]),      // userName
+
+                toLong(r[4]),           // counselorId
+                toStringVal(r[5]),      // counselorName
+
+                toStringVal(r[6]),      // domainName
+                toStringVal(r[7]),      // categoryName
+
+                toStringVal(r[8]),      // requestedAt
+                toStringVal(r[9]),      // startedAt
+                toStringVal(r[10]),     // endedAt
+                toLong(r[11])           // durationSec
+        )).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionHistoryResponse> getAllHistory() {
+
+        List<Object[]> rows = chatSessionRepository.findAllHistory();
+
+        return rows.stream().map(r -> new SessionHistoryResponse(
+                toLong(r[0]),           // sessionId
+                toStringVal(r[1]),      // status
+
+                toLong(r[2]),           // userId
+                toStringVal(r[3]),      // userName
+
+                toLong(r[4]),           // counselorId
+                toStringVal(r[5]),      // counselorName
+
+                toStringVal(r[6]),      // domainName
+                toStringVal(r[7]),      // categoryName
+
+                toStringVal(r[8]),      // requestedAt
+                toStringVal(r[9]),      // startedAt
+                toStringVal(r[10]),     // endedAt
+                toLong(r[11])           // durationSec
+        )).toList();
+    }
+
+    private Long toLong(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.longValue();
+        return Long.valueOf(o.toString());
+    }
+
+    private String toStringVal(Object o) {
+        return o == null ? null : o.toString();
+    }
+
 }

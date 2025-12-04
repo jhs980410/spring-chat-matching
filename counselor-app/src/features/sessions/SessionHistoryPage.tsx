@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   Title,
@@ -10,75 +10,93 @@ import {
   Button,
 } from "@mantine/core";
 
-import { mockSessions } from "../../data/mock/mockSessions";
-import { mockUsers } from "../../data/mock/mockUsers";
-import { mockCounselors } from "../../data/mock/mockCounselors";
-import { mockCategories } from "../../data/mock/mockCategories";
-
+import axios from "axios";
 import { Link } from "react-router-dom";
 
+interface SessionHistoryItem {
+  sessionId: number;
+  userName: string;
+  userEmail: string;
+  counselorName?: string;
+  categoryName: string;
+  status: string;
+  requestedAt: string | null;   // ← null 가능!
+}
+
 export default function SessionHistoryPage() {
+  const [sessions, setSessions] = useState<SessionHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [emailFilter, setEmailFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
 
-  const rows = useMemo(() => {
-    return mockSessions
-      .filter((s) => {
-        const user = mockUsers.find((u) => u.id === s.user_id);
-        if (!user) return false;
+  useEffect(() => {
+    axios
+      .get("/api/sessions/history")
+      .then((res) => setSessions(res.data))
+      .finally(() => setLoading(false));
+  }, []);
 
+  const rows = useMemo(() => {
+    return sessions
+      .filter((s) => {
         const matchEmail = emailFilter
-          ? user.email.toLowerCase().includes(emailFilter.toLowerCase())
+          ? s.userEmail.toLowerCase().includes(emailFilter.toLowerCase())
           : true;
 
         const matchStatus = statusFilter ? s.status === statusFilter : true;
 
         const matchCategory = categoryFilter
-          ? String(s.category_id) === categoryFilter
+          ? s.categoryName === categoryFilter
           : true;
 
         return matchEmail && matchStatus && matchCategory;
       })
-      .map((s) => {
-        const user = mockUsers.find((u) => u.id === s.user_id);
-        const counselor = mockCounselors.find((c) => c.id === s.counselor_id);
-        const category = mockCategories.find((cat) => cat.id === s.category_id);
+      .map((s) => (
+        <Table.Tr key={s.sessionId}>
+          <Table.Td>{s.sessionId}</Table.Td>
+          <Table.Td>{s.userName}</Table.Td>
+          <Table.Td>{s.counselorName ?? "-"}</Table.Td>
 
-        return (
-          <Table.Tr key={s.id}>
-            <Table.Td>{s.id}</Table.Td>
-            <Table.Td>{user?.nickname}</Table.Td>
-            <Table.Td>{counselor?.name ?? "-"}</Table.Td>
-            <Table.Td>
-              <Badge
-                color={
-                  s.status === "IN_PROGRESS"
-                    ? "blue"
-                    : s.status === "ENDED"
-                    ? "green"
-                    : "gray"
-                }
-              >
-                {s.status}
-              </Badge>
-            </Table.Td>
-            <Table.Td>{category?.name}</Table.Td>
-            <Table.Td>{s.requested_at.substring(0, 16)}</Table.Td>
-            <Table.Td>
-              <Button
-                component={Link}
-                to={`/sessions/${s.id}`}
-                size="xs"
-                variant="light"
-              >
-                상세보기
-              </Button>
-            </Table.Td>
-          </Table.Tr>
-        );
-      });
-  }, [emailFilter, statusFilter, categoryFilter]);
+          <Table.Td>
+            <Badge
+              color={
+                s.status === "IN_PROGRESS"
+                  ? "blue"
+                  : s.status === "ENDED"
+                  ? "green"
+                  : s.status === "AFTER_CALL"
+                  ? "yellow"
+                  : "gray"
+              }
+            >
+              {s.status}
+            </Badge>
+          </Table.Td>
+
+          <Table.Td>{s.categoryName}</Table.Td>
+
+          {/* 🔥 요청 시간 substring null-safe 적용 */}
+          <Table.Td>
+            {s.requestedAt ? s.requestedAt.substring(0, 16) : "-"}
+          </Table.Td>
+
+          <Table.Td>
+            <Button
+              component={Link}
+              to={`/sessions/${s.sessionId}`}
+              size="xs"
+              variant="light"
+            >
+              상세보기
+            </Button>
+          </Table.Td>
+        </Table.Tr>
+      ));
+  }, [sessions, emailFilter, statusFilter, categoryFilter]);
+
+  if (loading) return <div>로딩 중...</div>;
 
   return (
     <Card withBorder radius="md" p="lg">
@@ -86,7 +104,6 @@ export default function SessionHistoryPage() {
         상담 내역 조회
       </Title>
 
-      {/* 필터 */}
       <Group grow mb="md">
         <TextInput
           label="이메일 검색"
@@ -112,17 +129,18 @@ export default function SessionHistoryPage() {
         <Select
           label="카테고리"
           placeholder="전체"
-          data={mockCategories.map((c) => ({
-            value: String(c.id),
-            label: c.name,
-          }))}
+          data={[...new Set(sessions.map((s) => s.categoryName))].map(
+            (name) => ({
+              value: name,
+              label: name,
+            })
+          )}
           value={categoryFilter}
           onChange={setCategoryFilter}
           clearable
         />
       </Group>
 
-      {/* 테이블 */}
       <Table striped highlightOnHover>
         <Table.Thead>
           <Table.Tr>

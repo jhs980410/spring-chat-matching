@@ -158,5 +158,28 @@ public class ChatSessionController {
         return chatSessionService.convertToResponse(session);
     }
 
-  
+    @GetMapping("/history/counselor")
+    public List<SessionHistoryResponse> getCounselorHistory(Authentication auth) {
+        Long counselorId = (Long) auth.getPrincipal();
+        log.info("[API] Get counselor history : counselorId={}", counselorId);
+
+        return chatSessionService.getHistoryOfCounselor(counselorId);
+    }
+    @GetMapping("/history")
+    public List<SessionHistoryResponse> getAllHistory(Authentication auth) {
+        Long adminId = (Long) auth.getPrincipal();
+        log.info("[API] Admin gets all history : adminId={}", adminId);
+
+        return chatSessionService.getAllHistory();
+    }
+
+    @GetMapping("/{sessionId}/detail")
+    public SessionDetailResponse getDetail(
+            @PathVariable Long sessionId,
+            Authentication auth
+    ) {
+        Long actorId = (Long) auth.getPrincipal();
+        return chatSessionService.getSessionDetail(sessionId, actorId);
+    }
+
 }

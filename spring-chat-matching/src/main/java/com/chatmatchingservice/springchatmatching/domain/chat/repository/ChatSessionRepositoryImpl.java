@@ -3,10 +3,13 @@ package com.chatmatchingservice.springchatmatching.domain.chat.repository;
 import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatSession;
 import com.chatmatchingservice.springchatmatching.domain.chat.entity.SessionEndReason;
 import com.chatmatchingservice.springchatmatching.domain.chat.entity.SessionStatus;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,7 +18,8 @@ import java.util.Optional;
 public class ChatSessionRepositoryImpl implements ChatSessionRepository {
 
     private final ChatSessionJpaRepository jpaRepository;
-
+    @PersistenceContext
+    private EntityManager em;
     @Override
     public ChatSession createWaitingSession(Long userId, Long categoryId,Long domainId) {
         ChatSession session = ChatSession.builder()
@@ -117,5 +121,126 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
 
         jpaRepository.save(session);
     }
+    public Object[] findSessionDetail(Long sessionId) {
 
+        String sql = """
+        SELECT 
+            s.id,
+            s.status,
+            u.id AS userId,
+            u.nickname AS userName,
+            u.email AS userEmail,
+            co.id AS counselorId,
+            cu.nickname AS counselorName,
+            d.name AS domainName,
+            c.name AS categoryName,
+            s.requested_at,
+            s.assigned_at,
+            s.started_at,
+            s.ended_at,
+            s.duration_sec
+        FROM chat_session s
+        JOIN app_user u ON s.user_id = u.id
+        LEFT JOIN counselor co ON s.counselor_id = co.id
+        LEFT JOIN app_user cu ON cu.id = co.user_id
+        JOIN category c ON s.category_id = c.id
+        JOIN domain d ON s.domain_id = d.id
+        WHERE s.id = ?1
+        LIMIT 1
+    """;
+
+        return (Object[]) em.createNativeQuery(sql)
+                .setParameter(1, sessionId)
+                .getSingleResult();
+    }
+    public List<Object[]> findMessages(Long sessionId) {
+
+        String sql = """
+        SELECT 
+            m.id,
+            m.sender_type,
+            m.sender_id,
+            au.nickname AS senderName,
+            m.message,
+            m.created_at
+        FROM chat_message m
+        LEFT JOIN app_user au ON m.sender_id = au.id
+        WHERE m.session_id = ?1
+        ORDER BY m.created_at ASC
+    """;
+
+        return em.createNativeQuery(sql)
+                .setParameter(1, sessionId)
+                .getResultList();
+    }
+    @Override
+    public Object[] findAfterCall(Long sessionId) {
+
+        String sql = """
+        SELECT satisfaction_score, after_call_sec, feedback, ended_at
+        FROM counsel_log
+        WHERE session_id = ?1
+        LIMIT 1
+    """;
+
+        List<Object[]> list = em.createNativeQuery(sql)
+                .setParameter(1, sessionId)
+                .getResultList();
+
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    // ==============================================
+    // 🔥 상담사 개인 히스토리
+    // ==============================================
+
+    @Override
+    public List<Object[]> findHistoryOfCounselor(Long counselorId) {
+
+        // 문자열 분리!
+        String sql =
+                new StringBuilder().append("SELECT ").append("   s.id, ").append("   s.status, ").append("   u.id AS userId, ").append("   u.nickname AS userName, ").append("   co.id AS counselorId, ").append("   cu.nickname AS counselorName, ").append("   d.name AS domainName, ").append("   c.name AS categoryName, ").append("   s.requested_at, ").append("   s.started_at, ").append("   s.ended_at, ").append("   s.duration_sec ").append("FROM chat_session s ").append("JOIN app_user u ON s.user_id = u.id ").append("LEFT JOIN counselor co ON s.counselor_id = co.id ").append("LEFT JOIN app_user cu ON cu.id = co.id ").append("JOIN category c ON s.category_id = c.id ").append("JOIN domain d ON s.domain_id = d.id ").append("WHERE s.counselor_id = ").append(":counselorId").append(" ").append("ORDER BY s.requested_at DESC").toString();
+
+        return em.createNativeQuery(sql)
+                .setParameter("counselorId", counselorId)
+                .getResultList();
+    }
+
+
+    // ==============================================
+    // 🔥 전체 히스토리(관리자)
+    // ==============================================
+    @Override
+    public List<Object[]> findAllHistory() {
+
+        String sql = """
+            SELECT 
+                s.id,
+                s.status,
+
+                u.id AS userId,
+                u.nickname AS userName,
+
+                co.id AS counselorId,
+                cu.nickname AS counselorName,
+
+                d.name AS domainName,
+                c.name AS categoryName,
+
+                s.requested_at,
+                s.started_at,
+                s.ended_at,
+                s.duration_sec
+            FROM chat_session s
+            JOIN app_user u ON s.user_id = u.id
+            LEFT JOIN counselor co ON s.counselor_id = co.id
+            LEFT JOIN app_user cu ON cu.id = co.id
+            JOIN category c ON s.category_id = c.id
+            JOIN domain d ON s.domain_id = d.id
+            ORDER BY s.requested_at DESC
+        """;
+
+        return em.createNativeQuery(sql)
+                .getResultList();
+    }
 }
