@@ -1,5 +1,7 @@
 import { AppShell, Group, Text, Button, NavLink } from "@mantine/core";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
+import { notifications } from "@mantine/notifications";
 
 export default function CounselorLayout() {
   const nav = useNavigate();
@@ -7,12 +9,39 @@ export default function CounselorLayout() {
 
   const isActive = (path: string) => location.pathname.startsWith(path);
 
+  // ================================
+  // 진행 중 상담 조회 후 이동
+  // ================================
+  const moveToActiveSession = async () => {
+    try {
+      const res = await axios.get("/api/sessions/active", {
+        withCredentials: true,
+      });
+
+      if (res.data && res.data.sessionId) {
+        nav(`/chat/${res.data.sessionId}`);
+      } else {
+        notifications.show({
+          color: "red",
+          message: "현재 진행 중인 상담이 없습니다.",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      notifications.show({
+        color: "red",
+        message: "상담 세션 조회 중 오류가 발생했습니다.",
+      });
+    }
+  };
+
   return (
     <AppShell
       header={{ height: 60 }}
       navbar={{ width: 220, breakpoint: "sm" }}
       padding="md"
     >
+      {/* ================= Header ================= */}
       <AppShell.Header>
         <Group
           justify="space-between"
@@ -35,6 +64,7 @@ export default function CounselorLayout() {
         </Group>
       </AppShell.Header>
 
+      {/* ================= Sidebar ================= */}
       <AppShell.Navbar p="md" bg="#F6F7FA">
         <NavLink
           label="📊 대시보드"
@@ -43,9 +73,9 @@ export default function CounselorLayout() {
         />
 
         <NavLink
-          label="💬 채팅 상담"
+          label="💬 진행 중 상담"
           active={isActive("/chat")}
-          onClick={() => nav("/chat/1")}
+          onClick={moveToActiveSession}
         />
 
         <NavLink
@@ -67,8 +97,8 @@ export default function CounselorLayout() {
         />
       </AppShell.Navbar>
 
+      {/* ================= Main ================= */}
       <AppShell.Main>
-        {/* 🔥 children 대신 Outlet만 남긴다 */}
         <Outlet />
       </AppShell.Main>
     </AppShell>

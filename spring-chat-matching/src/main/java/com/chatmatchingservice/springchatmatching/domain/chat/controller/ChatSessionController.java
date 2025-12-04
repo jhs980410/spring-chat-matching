@@ -1,6 +1,7 @@
 package com.chatmatchingservice.springchatmatching.domain.chat.controller;
 
 import com.chatmatchingservice.springchatmatching.domain.chat.dto.*;
+import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatSession;
 import com.chatmatchingservice.springchatmatching.domain.chat.service.ChatSessionService;
 import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselRequestDto;
 import com.chatmatchingservice.springchatmatching.domain.counselor.service.WaitingRequestService;
@@ -140,5 +141,22 @@ public class ChatSessionController {
 
         return ResponseEntity.ok("ENDED");
     }
+
+    // ============================================
+// 7. 세션 단건 상세 조회
+// ============================================
+    @GetMapping("/{sessionId}")
+    public SessionInfoResponse getSessionDetail(
+            @PathVariable Long sessionId,
+            Authentication auth
+    ) {
+        Long actorId = (Long) auth.getPrincipal();
+        log.info("[API] Get session detail : sessionId={}, actorId={}", sessionId, actorId);
+
+        ChatSession session = chatSessionService.getAndValidateSession(sessionId, actorId);
+
+        return chatSessionService.convertToResponse(session);
+    }
+
   
 }

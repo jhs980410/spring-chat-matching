@@ -1,10 +1,15 @@
 import { Group, Text, Badge, Divider } from "@mantine/core";
 
-export default function ChatHeader({ session }: any) {
+interface SessionInfo {
+  categoryName: string;
+  status: string;
+}
+
+export default function ChatHeader({ session }: { session: SessionInfo }) {
   return (
     <>
-      <Group position="apart" mb="sm">
-        <Text fw={700}>{session.category_name}</Text>
+      <Group justify="space-between" mb="sm">
+        <Text fw={700}>{session.categoryName}</Text>
 
         <Badge color={session.status === "IN_PROGRESS" ? "blue" : "gray"}>
           {session.status}
