@@ -179,6 +179,9 @@ public class ChatSessionController {
             Authentication auth
     ) {
         Long actorId = (Long) auth.getPrincipal();
+
+        System.out.println("actorid는 : "+actorId);
+        System.out.println("sessionId는 : "+sessionId);
         return chatSessionService.getSessionDetail(sessionId, actorId);
     }
 

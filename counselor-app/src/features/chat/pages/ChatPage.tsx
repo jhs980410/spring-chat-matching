@@ -21,15 +21,19 @@ export default function ChatPage() {
   const [error, setError] = useState("");
 
   // ================================
-  // API 요청: 세션 + 메시지 조회
+  // API 요청
   // ================================
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const sessionRes = await axios.get(`/api/sessions/${sid}`);
+        const sessionRes = await axios.get(`/api/sessions/${sid}/detail`, {
+          withCredentials: true,
+        });
         setSession(sessionRes.data);
 
-        const msgRes = await axios.get(`/api/messages/${sid}`);
+        const msgRes = await axios.get(`/api/messages/${sid}`, {
+          withCredentials: true,
+        });
         setMessages(msgRes.data);
       } catch (e) {
         setError("세션 정보를 불러오지 못했습니다.");
@@ -42,7 +46,7 @@ export default function ChatPage() {
   }, [sid]);
 
   // ================================
-  // 로딩 / 에러 처리
+  // 로딩 처리
   // ================================
   if (loading) {
     return (
@@ -52,6 +56,9 @@ export default function ChatPage() {
     );
   }
 
+  // ================================
+  // 에러 처리
+  // ================================
   if (error || !session) {
     return (
       <Title order={2} c="red">
@@ -61,19 +68,21 @@ export default function ChatPage() {
   }
 
   // ================================
-  // 렌더링
+  // UI 렌더링
   // ================================
   return (
     <>
       <Title order={2} mb="md">
-        채팅 세션 #{sid}
+        상담 세션 #{sid}
       </Title>
 
       <Grid gutter="xl">
+        {/* LEFT (사용자 정보) */}
         <Grid.Col span={3}>
           <ChatUserInfo session={session} />
         </Grid.Col>
 
+        {/* CENTER (실제 채팅) */}
         <Grid.Col span={6}>
           <Card withBorder shadow="sm" p="md" radius="md">
             <ChatHeader session={session} />
@@ -82,6 +91,7 @@ export default function ChatPage() {
           </Card>
         </Grid.Col>
 
+        {/* RIGHT (상담 상태 및 AfterCall) */}
         <Grid.Col span={3}>
           <ChatStatusPanel session={session} />
         </Grid.Col>

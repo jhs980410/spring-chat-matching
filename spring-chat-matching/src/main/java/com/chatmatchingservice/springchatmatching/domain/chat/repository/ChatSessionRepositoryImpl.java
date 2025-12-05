@@ -142,17 +142,21 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
         FROM chat_session s
         JOIN app_user u ON s.user_id = u.id
         LEFT JOIN counselor co ON s.counselor_id = co.id
-        LEFT JOIN app_user cu ON cu.id = co.user_id
+        LEFT JOIN app_user cu ON cu.id = co.id
         JOIN category c ON s.category_id = c.id
         JOIN domain d ON s.domain_id = d.id
         WHERE s.id = ?1
         LIMIT 1
     """;
 
-        return (Object[]) em.createNativeQuery(sql)
+        List<Object[]> result = em.createNativeQuery(sql)
                 .setParameter(1, sessionId)
-                .getSingleResult();
+                .getResultList();
+
+        if (result.isEmpty()) return null;
+        return result.get(0);
     }
+
     public List<Object[]> findMessages(Long sessionId) {
 
         String sql = """
@@ -162,7 +166,7 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
             m.sender_id,
             au.nickname AS senderName,
             m.message,
-            m.created_at
+             DATE_FORMAT(m.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
         FROM chat_message m
         LEFT JOIN app_user au ON m.sender_id = au.id
         WHERE m.session_id = ?1

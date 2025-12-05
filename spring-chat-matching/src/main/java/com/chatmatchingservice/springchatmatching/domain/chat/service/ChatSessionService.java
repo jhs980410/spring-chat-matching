@@ -30,6 +30,7 @@ import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -277,10 +278,37 @@ public class ChatSessionService {
     // 8. 공통 검증
     // =========================================================
     private void validateAccess(ChatSession session, Long actorId) {
-        if (!actorId.equals(session.getUserId()) &&
-                !actorId.equals(session.getCounselorId())) {
-            throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
-        }
+
+        // 🔸 현재 로그인된 사용자의 Role 확인
+        boolean isAdmin = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        boolean isCounselor = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities()
+                .stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COUNSELOR"));
+
+        // ============================
+        // 1) ADMIN → 전체 접근 허용
+        // ============================
+        if (isAdmin) return;
+
+        // ============================
+        // 2) 상담사 → 전체 접근 허용 (READ ONLY)
+        // ============================
+        if (isCounselor) return;
+
+        // ============================
+        // 3) 고객 → 본인 세션만
+        // ============================
+        if (actorId.equals(session.getUserId())) return;
+
+        // ============================
+        // 접근 불가
+        // ============================
+        throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
     }
 
     private void validateNotFinished(ChatSession session) {

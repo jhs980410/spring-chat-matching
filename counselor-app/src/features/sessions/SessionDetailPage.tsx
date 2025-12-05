@@ -17,7 +17,7 @@ interface MessageItem {
   senderType: "USER" | "COUNSELOR";
   senderName: string;
   message: string;
-  createdAt: string;
+  createdAt: string | null;
 }
 
 interface AfterCallLog {
@@ -56,12 +56,11 @@ export default function SessionDetailPage() {
   const [session, setSession] = useState<SessionDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ============================
-  // 🔥 실제 API 호출
-  // ============================
   useEffect(() => {
     axios
-      .get(`/api/sessions/${sessionId}/detail`)
+      .get(`/api/sessions/${sessionId}/detail`, {
+        withCredentials: true,
+      })
       .then((res) => setSession(res.data))
       .finally(() => setLoading(false));
   }, [sessionId]);
@@ -82,28 +81,30 @@ export default function SessionDetailPage() {
         상담 상세 정보 #{session.sessionId}
       </Title>
 
-      {/* =================== */}
-      {/* 고객 정보 & 상담사 정보 */}
-      {/* =================== */}
+      {/* 고객 정보/ 상담사 정보 */}
       <Group align="flex-start" grow mb="xl">
         <Card withBorder radius="md" p="md">
-          <Title order={5} mb="sm">고객 정보</Title>
+          <Title order={5} mb="sm">
+            고객 정보
+          </Title>
           <Text size="sm">이름: {session.userName}</Text>
           <Text size="sm">이메일: {session.userEmail}</Text>
         </Card>
 
         <Card withBorder radius="md" p="md">
-          <Title order={5} mb="sm">상담사 정보</Title>
+          <Title order={5} mb="sm">
+            상담사 정보
+          </Title>
           <Text size="sm">이름: {session.counselorName ?? "-"}</Text>
           <Text size="sm">ID: {session.counselorId ?? "-"}</Text>
         </Card>
       </Group>
 
-      {/* =================== */}
       {/* 세션 정보 */}
-      {/* =================== */}
       <Card withBorder radius="md" p="md" mb="xl">
-        <Title order={5} mb="sm">세션 정보</Title>
+        <Title order={5} mb="sm">
+          세션 정보
+        </Title>
 
         <Group grow>
           <div>
@@ -113,8 +114,9 @@ export default function SessionDetailPage() {
             <Text size="sm">
               카테고리: <b>{session.categoryName}</b>
             </Text>
-            <Text size="sm">
-              상태:{" "}
+
+            <Group gap={6} mt={4}>
+              <Text size="sm">상태:</Text>
               <Badge
                 color={
                   session.status === "IN_PROGRESS"
@@ -128,7 +130,7 @@ export default function SessionDetailPage() {
               >
                 {session.status}
               </Badge>
-            </Text>
+            </Group>
           </div>
 
           <div>
@@ -137,16 +139,17 @@ export default function SessionDetailPage() {
             <Text size="sm">시작: {session.startedAt ?? "-"}</Text>
             <Text size="sm">종료: {session.endedAt ?? "-"}</Text>
             <Text size="sm">
-              상담 시간: {session.durationSec ? `${session.durationSec}s` : "-"}
+              상담 시간:{" "}
+              {session.durationSec ? `${session.durationSec}s` : "-"}
             </Text>
           </div>
         </Group>
       </Card>
 
-      {/* =================== */}
-      {/* 메시지 타임라인 */}
-      {/* =================== */}
-      <Title order={5} mb="sm">메시지 기록</Title>
+      {/* 메시지 */}
+      <Title order={5} mb="sm">
+        메시지 기록
+      </Title>
 
       <ScrollArea h={300} scrollbarSize={6} mb="xl">
         <Card withBorder radius="md" p="md">
@@ -156,7 +159,9 @@ export default function SessionDetailPage() {
                 key={msg.id}
                 style={{
                   alignSelf:
-                    msg.senderType === "COUNSELOR" ? "flex-end" : "flex-start",
+                    msg.senderType === "COUNSELOR"
+                      ? "flex-end"
+                      : "flex-start",
                   backgroundColor:
                     msg.senderType === "COUNSELOR" ? "#d0ebff" : "#f1f3f5",
                   padding: "8px 12px",
@@ -169,7 +174,9 @@ export default function SessionDetailPage() {
                 </Text>
                 <Text size="sm">{msg.message}</Text>
                 <Text size="xs" c="dimmed">
-                  {msg.createdAt.substring(11, 19)}
+                  {msg.createdAt
+                    ? msg.createdAt.substring(11, 19)
+                    : "-"}
                 </Text>
               </div>
             ))}
@@ -177,11 +184,11 @@ export default function SessionDetailPage() {
         </Card>
       </ScrollArea>
 
-      {/* =================== */}
-      {/* 상담 로그 (After Call) */}
-      {/* =================== */}
+      {/* After-call */}
       <Card withBorder radius="md" p="md">
-        <Title order={5} mb="sm">상담 로그 (After-Call)</Title>
+        <Title order={5} mb="sm">
+          상담 로그 (After-Call)
+        </Title>
 
         {session.afterCall ? (
           <>

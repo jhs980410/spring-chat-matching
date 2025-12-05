@@ -134,6 +134,6 @@ public record SessionDetailResponse(
             Long senderId,
             String senderName,
             String message,
-            Long createdAtMillis
+            Long createdAt
     ) {}
 }
