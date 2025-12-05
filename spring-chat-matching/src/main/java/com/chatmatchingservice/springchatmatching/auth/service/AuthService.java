@@ -10,9 +10,11 @@ import com.chatmatchingservice.springchatmatching.domain.user.entity.UserStatus;
 import com.chatmatchingservice.springchatmatching.domain.user.repository.AppUserRepository;
 import com.chatmatchingservice.springchatmatching.domain.counselor.entity.Counselor;
 import com.chatmatchingservice.springchatmatching.domain.counselor.repository.CounselorRepository;
+import com.chatmatchingservice.springchatmatching.global.auth.jwt.CookieUtil;
 import com.chatmatchingservice.springchatmatching.global.auth.jwt.JwtTokenProvider;
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,7 +27,7 @@ public class AuthService {
     private final CounselorRepository counselorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
-
+    private final CookieUtil cookieUtil;
     // ============================================
     // USER SIGNUP
     // ============================================
@@ -94,4 +96,21 @@ public class AuthService {
 
         return new AuthResponse(access, refresh, c.getId(), "COUNSELOR");
     }
+
+    public AuthResponse refresh(HttpServletRequest request) {
+
+        String refreshToken = cookieUtil.getRefreshToken(request);
+
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+        String role = jwtTokenProvider.getRole(refreshToken);
+
+        String newAccess = jwtTokenProvider.generateAccessToken(userId, role);
+
+        return new AuthResponse(newAccess, refreshToken, userId, role);
+    }
+
 }

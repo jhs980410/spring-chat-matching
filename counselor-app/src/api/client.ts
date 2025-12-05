@@ -1,7 +1,7 @@
 // src/api/client.ts
-import axios from "axios";
+import api from "../api/axios";
 
-export const apiClient = axios.create({
+export const apiClient = api.create({
   baseURL: "http://localhost:8080/api",
   withCredentials: true,
 });

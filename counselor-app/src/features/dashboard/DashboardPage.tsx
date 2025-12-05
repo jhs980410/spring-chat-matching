@@ -11,14 +11,11 @@ import {
 } from "@mantine/core";
 
 import { LineChart, BarChart, DonutChart } from "@mantine/charts";
-import { useEffect, useState } from "react";
-import axios from "axios";
-
-// =============== Axios 기본 설정 (쿠키 전달 필수) ==================
-axios.defaults.withCredentials = true;
+import { useEffect, useMemo, useState } from "react";
+import api from "../../api/axios";
 
 // =========================
-// API 응답 타입 정의
+// 공통 타입 정의
 // =========================
 interface DailyStat {
   statDate: string;
@@ -49,39 +46,81 @@ interface TodaySession {
 }
 
 export default function DashboardPage() {
+  const [loading, setLoading] = useState(true);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [counselorLoad, setCounselorLoad] = useState<CounselorLoad[]>([]);
   const [statusRatio, setStatusRatio] = useState<StatusRatio | null>(null);
   const [todaySessions, setTodaySessions] = useState<TodaySession[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // =========================
-  // API 호출
+  // API 호출 (모듈 기능처럼 작동)
   // =========================
   useEffect(() => {
-    async function loadDashboard() {
+    (async () => {
       try {
         const [daily, load, ratio, today] = await Promise.all([
-          axios.get("/api/stats/daily"),
-          axios.get("/api/stats/counselors/handled"),
-          axios.get("/api/dashboard/status-ratio"),
-          axios.get("/api/dashboard/sessions/today"),
+          api.get("/stats/daily"),
+          api.get("/stats/counselors/handled"),
+          api.get("/dashboard/status-ratio"),
+          api.get("/dashboard/sessions/today"),
         ]);
 
         setDailyStats(daily.data);
         setCounselorLoad(load.data);
         setStatusRatio(ratio.data);
         setTodaySessions(today.data);
-      } catch (err) {
-        console.error("대시보드 API 오류", err);
       } finally {
         setLoading(false);
       }
-    }
-
-    loadDashboard();
+    })();
   }, []);
 
+  // =========================
+  // 계산값은 useMemo 처리 (렌더링 최적화)
+  // =========================
+  const totalHandled = useMemo(
+    () => dailyStats.reduce((acc, v) => acc + v.handledCount, 0),
+    [dailyStats]
+  );
+
+  const avgDuration = useMemo(
+    () =>
+      dailyStats.length
+        ? (
+            dailyStats.reduce((acc, v) => acc + v.avgDurationSec, 0) /
+            dailyStats.length
+          ).toFixed(1)
+        : "0.0",
+    [dailyStats]
+  );
+
+  const avgScore = useMemo(
+    () =>
+      dailyStats.length
+        ? (
+            dailyStats.reduce((acc, v) => acc + v.avgScore, 0) /
+            dailyStats.length
+          ).toFixed(2)
+        : "0.00",
+    [dailyStats]
+  );
+
+  const donutData = useMemo(
+    () =>
+      statusRatio
+        ? [
+            { name: "대기", value: statusRatio.waiting, color: "#868e96" },
+            { name: "진행중", value: statusRatio.inProgress, color: "#74c0fc" },
+            { name: "종료됨", value: statusRatio.ended, color: "#51cf66" },
+            { name: "후처리", value: statusRatio.afterCall, color: "#ffd43b" },
+          ]
+        : [],
+    [statusRatio]
+  );
+
+  // =========================
+  // LOADING
+  // =========================
   if (loading)
     return (
       <Center h="80vh">
@@ -90,32 +129,8 @@ export default function DashboardPage() {
     );
 
   // =========================
-  // 데이터 가공
-  // =========================
-
-  const totalHandled =
-    dailyStats?.reduce((a, b) => a + (b?.handledCount ?? 0), 0) ?? 0;
-
-  const avgDuration =
-    (dailyStats?.reduce((a, b) => a + (b?.avgDurationSec ?? 0), 0) ?? 0) /
-    (dailyStats.length || 1);
-
-  const avgScore =
-    (dailyStats?.reduce((a, b) => a + (b?.avgScore ?? 0), 0) ?? 0) /
-    (dailyStats.length || 1);
-
-  const donutData = statusRatio
-    ? [
-        { name: "대기", value: statusRatio.waiting, color: "#868e96" },
-        { name: "진행중", value: statusRatio.inProgress, color: "#74c0fc" },
-        { name: "종료됨", value: statusRatio.ended, color: "#51cf66" },
-        { name: "후처리", value: statusRatio.afterCall, color: "#ffd43b" },
-      ]
-    : [];
-
-  // ===============================
   // UI 렌더링
-  // ===============================
+  // =========================
   return (
     <>
       <Title order={2} mb="lg">
@@ -134,73 +149,71 @@ export default function DashboardPage() {
         <Card withBorder p="md">
           <Title order={5}>평균 상담 시간</Title>
           <Text size="xl" fw="bold">
-            {avgDuration.toFixed(1)} 초
+            {avgDuration} 초
           </Text>
         </Card>
 
         <Card withBorder p="md">
           <Title order={5}>평균 만족도</Title>
           <Text size="xl" fw="bold">
-            {avgScore.toFixed(2)}
+            {avgScore}
           </Text>
         </Card>
       </SimpleGrid>
 
       <Divider my="lg" />
 
-      {/* 일자별 상담 건수 */}
+      {/* 📈 일자별 상담 건수 */}
       <Card withBorder p="lg" mb="xl">
-        <Title order={4} mb="md">📈 일자별 상담 건수</Title>
+        <Title order={4} mb="md">
+          📈 일자별 상담 건수
+        </Title>
         <LineChart
           h={250}
-          data={dailyStats.map((s) => ({
-            date: s.statDate,
-            count: s.handledCount,
-          }))}
+          data={dailyStats.map((v) => ({ date: v.statDate, count: v.handledCount }))}
           dataKey="date"
           series={[{ name: "count", label: "상담 수", color: "blue" }]}
-          withLegend
         />
       </Card>
 
-      {/* 평균 상담 시간 */}
+      {/* ⏱ 평균 상담 시간 */}
       <Card withBorder p="lg" mb="xl">
-        <Title order={4} mb="md">⏱ 평균 상담 시간</Title>
+        <Title order={4} mb="md">
+          ⏱ 평균 상담 시간
+        </Title>
         <LineChart
           h={250}
-          data={dailyStats.map((s) => ({
-            date: s.statDate,
-            duration: s.avgDurationSec,
-          }))}
+          data={dailyStats.map((v) => ({ date: v.statDate, duration: v.avgDurationSec }))}
           dataKey="date"
           series={[{ name: "duration", label: "평균 시간(초)", color: "green" }]}
-          withLegend
         />
       </Card>
 
-      {/* 상담사별 처리량 */}
+      {/* 👥 상담사별 처리량 */}
       <Card withBorder p="lg" mb="xl">
-        <Title order={4} mb="md">👥 상담사별 총 처리량</Title>
-
+        <Title order={4} mb="md">
+          👥 상담사별 총 처리량
+        </Title>
         <BarChart
           h={250}
-          data={counselorLoad.map((c) => ({
-            counselor: c.counselorName,
-            count: c.handledCount,
+          data={counselorLoad.map((v) => ({
+            counselor: v.counselorName,
+            count: v.handledCount,
           }))}
           dataKey="counselor"
           series={[{ name: "count", label: "건수", color: "teal" }]}
-          withLegend
         />
       </Card>
 
-      {/* 상담 상태 비율 */}
+      {/* 📊 상담 상태 비율 */}
       <Card withBorder p="lg" mb="xl">
-        <Title order={4} mb="md">📊 상담 상태 비율</Title>
+        <Title order={4} mb="md">
+          📊 상담 상태 비율
+        </Title>
         <DonutChart withLabels withTooltip size={220} data={donutData} />
       </Card>
 
-      {/* 오늘 상담 목록 */}
+      {/* 📅 오늘 상담 목록 */}
       <Card withBorder shadow="sm" p="lg" mb="lg">
         <Text fw={700} mb="md">
           오늘 상담 목록
@@ -222,7 +235,7 @@ export default function DashboardPage() {
               <Table.Tr key={s.sessionId}>
                 <Table.Td>{s.userName}</Table.Td>
                 <Table.Td>{s.categoryName}</Table.Td>
-                <Table.Td>{s.startedAt}</Table.Td>
+                <Table.Td>{s.startedAt ?? "-"}</Table.Td>
                 <Table.Td>{s.endedAt ?? "-"}</Table.Td>
                 <Table.Td>
                   {s.status === "ENDED" ? (

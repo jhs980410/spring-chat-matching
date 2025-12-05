@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Grid, Title, Card, Loader, Center } from "@mantine/core";
-import axios from "axios";
+import api from "../../../api/axios";
 
 import ChatUserInfo from "../components/ChatUserInfo";
 import ChatHeader from "../components/ChatHeader";
@@ -26,12 +26,12 @@ export default function ChatPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const sessionRes = await axios.get(`/api/sessions/${sid}/detail`, {
+        const sessionRes = await api.get(`/sessions/${sid}/detail`, {
           withCredentials: true,
         });
         setSession(sessionRes.data);
 
-        const msgRes = await axios.get(`/api/messages/${sid}`, {
+        const msgRes = await api.get(`/messages/${sid}`, {
           withCredentials: true,
         });
         setMessages(msgRes.data);

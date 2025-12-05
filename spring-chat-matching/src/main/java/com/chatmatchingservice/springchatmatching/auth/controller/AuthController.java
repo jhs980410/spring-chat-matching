@@ -7,12 +7,12 @@ import com.chatmatchingservice.springchatmatching.domain.user.dto.UserLoginReque
 import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselorSignupRequest;
 import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselorLoginRequest;
 import com.chatmatchingservice.springchatmatching.global.auth.jwt.CookieUtil; // 추가
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -20,11 +20,12 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
-    private final CookieUtil cookieUtil; // CookieUtil 주입
+    private final CookieUtil cookieUtil;
 
-    // ================================
+
+    // ==============================
     // USER SIGNUP
-    // ================================
+    // ==============================
     @PostMapping("/user/signup")
     public ResponseEntity<Void> userSignup(@RequestBody UserSignupRequest req) {
         log.info("[API] User Signup: {}", req.email());
@@ -32,26 +33,25 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    // ================================
-    // USER LOGIN (HttpOnly 쿠키 적용)
-    // ================================
+
+    // ==============================
+    // USER LOGIN
+    // ==============================
     @PostMapping("/user/login")
     public ResponseEntity<AuthResponse> userLogin(
             @RequestBody UserLoginRequest req,
-            HttpServletResponse response // HttpServletResponse 추가
+            HttpServletResponse response
     ) {
         log.info("[API] User Login attempt: {}", req.email());
         AuthResponse res = authService.userLogin(req);
-
-        // 유틸리티를 사용하여 HttpOnly 쿠키 설정 로직을 위임
         cookieUtil.addTokenCookiesToResponse(response, res);
-
         return ResponseEntity.ok(res);
     }
 
-    // ================================
+
+    // ==============================
     // COUNSELOR SIGNUP
-    // ================================
+    // ==============================
     @PostMapping("/counselor/signup")
     public ResponseEntity<Void> counselorSignup(@RequestBody CounselorSignupRequest req) {
         log.info("[API] Counselor Signup: {}", req.email());
@@ -59,9 +59,10 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    // ================================
-    // COUNSELOR LOGIN (HttpOnly 쿠키 적용, CookieUtil 사용으로 로직 간소화)
-    // ================================
+
+    // ==============================
+    // COUNSELOR LOGIN
+    // ==============================
     @PostMapping("/counselor/login")
     public ResponseEntity<AuthResponse> counselorLogin(
             @RequestBody CounselorLoginRequest req,
@@ -69,11 +70,38 @@ public class AuthController {
     ) {
         log.info("[API] Counselor Login attempt: {}", req.email());
         AuthResponse res = authService.counselorLogin(req);
-
-        // 유틸리티를 사용하여 HttpOnly 쿠키 설정 로직을 위임
         cookieUtil.addTokenCookiesToResponse(response, res);
+        return ResponseEntity.ok(res);
+    }
+
+
+    // =======================================================
+    // 🔥 REFRESH TOKEN (AccessToken 재발급)
+    // =======================================================
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) {
+        AuthResponse res = authService.refresh(request);
+
+        // 새 Access 쿠키 갱신
+        cookieUtil.updateAccessToken(response, res.accessToken());
 
         return ResponseEntity.ok(res);
     }
 
+
+    // =======================================================
+    // 🔥 LOGOUT (쿠키 삭제)
+    // =======================================================
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+
+        log.info("[API] Logout");
+
+        cookieUtil.clearAuthCookies(response);
+
+        return ResponseEntity.ok().build();
+    }
 }

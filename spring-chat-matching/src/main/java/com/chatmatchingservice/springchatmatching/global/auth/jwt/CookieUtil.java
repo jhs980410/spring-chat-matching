@@ -69,6 +69,10 @@ public class CookieUtil {
         return getTokenFromCookie(request, ACCESS_TOKEN_NAME);
     }
 
+    public String getRefreshToken(HttpServletRequest request) {
+        return getTokenFromCookie(request, REFRESH_TOKEN_NAME);
+    }
+
     /**
      * 지정된 이름의 쿠키에서 값을 추출합니다.
      */
@@ -85,4 +89,38 @@ public class CookieUtil {
                 .map(Cookie::getValue)
                 .orElse(null);
     }
+    //Access만 다시 셋팅하는 함수
+    public void updateAccessToken(HttpServletResponse response, String newAccess) {
+        ResponseCookie accessCookie = ResponseCookie.from("ACCESS_TOKEN", newAccess)
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(60 * 60)
+                .build();
+
+        response.addHeader("Set-Cookie", accessCookie.toString());
+    }
+    public void clearAuthCookies(HttpServletResponse response) {
+
+        ResponseCookie clearAccess = ResponseCookie.from("ACCESS_TOKEN", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)  // 즉시 삭제
+                .build();
+
+        ResponseCookie clearRefresh = ResponseCookie.from("REFRESH_TOKEN", "")
+                .httpOnly(true)
+                .secure(false)
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(0)
+                .build();
+
+        response.addHeader("Set-Cookie", clearAccess.toString());
+        response.addHeader("Set-Cookie", clearRefresh.toString());
+    }
+
 }

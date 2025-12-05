@@ -1,6 +1,6 @@
 import { Button, Card, TextInput, Title } from "@mantine/core";
 import { useState } from "react";
-import axios from "axios";
+import api from "../../api/axios";
 import { useAuthStore } from "../../stores/authStore";
 import { useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
@@ -15,7 +15,7 @@ export default function LoginPage() {
   // handleLogin 함수는 컴포넌트 함수 LoginPage 내부에 완전히 정의되어야 합니다.
   const handleLogin = async () => {
     try {
-      const res = await axios.post("http://localhost:8080/api/auth/counselor/login", {
+      const res = await api.post("/auth/counselor/login", {
         email,
         password: pwd,
       });

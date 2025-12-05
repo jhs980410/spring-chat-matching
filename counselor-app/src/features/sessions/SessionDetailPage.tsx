@@ -10,7 +10,7 @@ import {
   Badge,
 } from "@mantine/core";
 
-import axios from "axios";
+import api from "../../api/axios";
 
 interface MessageItem {
   id: number;
@@ -57,8 +57,8 @@ export default function SessionDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`/api/sessions/${sessionId}/detail`, {
+    api
+      .get(`/sessions/${sessionId}/detail`, {
         withCredentials: true,
       })
       .then((res) => setSession(res.data))

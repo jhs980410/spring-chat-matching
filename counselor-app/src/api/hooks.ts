@@ -1,7 +1,7 @@
 // src/api/hooks.ts
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import { Notice, CounselorProfile, CounselorStat } from "../stores/mockData";
+import type { Notice, CounselorProfile, CounselorStat } from "../stores/mockData";
 
 // 🔹 공지사항 목록 (notice 테이블)
 export function useNotices() {

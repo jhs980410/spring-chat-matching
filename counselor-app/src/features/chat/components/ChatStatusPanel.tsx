@@ -1,7 +1,7 @@
 import { Card, Text, Button, Divider } from "@mantine/core";
 import { useState } from "react";
 import { notifications } from "@mantine/notifications";
-import axios from "axios"; // 네 axios 인스턴스
+import api from "../../../api/axios"; // 네 axios 인스턴스
 import AfterCallForm from "./AfterCallForm";
 
 export default function ChatStatusPanel({ session }: any) {
@@ -27,7 +27,7 @@ export default function ChatStatusPanel({ session }: any) {
 
     setLoading(true);
     try {
-      await axios.patch(`/api/sessions/${session.id}/end`);
+      await api.patch(`/sessions/${session.id}/end`);
 
       notifications.show({
         color: "red",
@@ -62,7 +62,7 @@ export default function ChatStatusPanel({ session }: any) {
   // =========================
   const handleReady = async () => {
     try {
-      await axios.patch("/api/counselors/ready", {
+      await api.patch("/counselors/ready", {
         categoryIds: [session.category_id], // 필요하면 변경
       });
 

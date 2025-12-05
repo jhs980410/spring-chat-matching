@@ -25,6 +25,7 @@ public enum ErrorCode {
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "AUTH_007", "토큰이 만료되었습니다."),
     TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "AUTH_008", "유효하지 않은 토큰입니다."),
     TOKEN_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH_009", "토큰이 필요합니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_010", "유효하지 않은 리프레시 토큰입니다."),
 
 
     // ======== 상담사 ========

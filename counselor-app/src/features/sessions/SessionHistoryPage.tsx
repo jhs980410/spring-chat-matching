@@ -10,7 +10,7 @@ import {
   Button,
 } from "@mantine/core";
 
-import axios from "axios";
+import api from "../../api/axios";
 import { Link } from "react-router-dom";
 
 interface SessionHistoryItem {
@@ -32,8 +32,8 @@ export default function SessionHistoryPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
 
   useEffect(() => {
-    axios
-      .get("/api/sessions/history")
+    api
+      .get("/sessions/history")
       .then((res) => setSessions(res.data))
       .finally(() => setLoading(false));
   }, []);

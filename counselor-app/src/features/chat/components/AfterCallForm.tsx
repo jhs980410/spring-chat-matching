@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Text, Select, NumberInput, Textarea, Button, Group } from "@mantine/core";
-import axios from "axios"; // 네 axios 인스턴스 경로로 변경
+// 네 axios 인스턴스 경로로 변경
+import api from "../../../api/axios";
 import { notifications } from "@mantine/notifications";
 
 interface AfterCallFormProps {
@@ -36,7 +37,7 @@ export default function AfterCallForm({ session, onSaved }: AfterCallFormProps) 
     setSaving(true);
 
     try {
-      await axios.patch(`/api/sessions/${session.id}/after-call`, {
+      await api.patch(`/sessions/${session.id}/after-call`, {
         endReason: form.endReason,
         satisfactionScore: form.satisfactionScore,
         afterCallSec: form.afterCallSec,

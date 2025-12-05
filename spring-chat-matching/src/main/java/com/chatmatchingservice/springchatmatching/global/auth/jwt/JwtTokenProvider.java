@@ -167,4 +167,25 @@ public class JwtTokenProvider {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
     }
+
+    public Long getUserId(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(publicKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return Long.valueOf(claims.getSubject());
+    }
+
+    public String getRole(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(publicKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("role", String.class);
+    }
+
 }
