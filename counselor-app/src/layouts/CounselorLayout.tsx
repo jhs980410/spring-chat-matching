@@ -37,27 +37,33 @@ export default function CounselorLayout() {
   // ==============================
   // 🔹 진행 중 상담 조회
   // ==============================
-  const moveToActiveSession = async () => {
-    try {
-      const res = await api.get("/sessions/active", {
-        withCredentials: true,
-      });
+const moveToActiveSession = async () => {
+  try {
+    const res = await api.get("/sessions/active", {
+      withCredentials: true,
+    });
 
-      if (res.data && res.data.sessionId) {
-        nav(`/chat/${res.data.sessionId}`);
-      } else {
-        notifications.show({
-          color: "red",
-          message: "현재 진행 중인 상담이 없습니다.",
-        });
-      }
-    } catch (error) {
+    console.log("🔥 active API response:", res.data);
+
+    if (res.data && res.data.sessionId) {
+      const id = Number(res.data.sessionId);
+      console.log("🔥 parsed session id:", id);
+
+      nav(`/chat/${id}`, { replace: true });
+    } else {
       notifications.show({
         color: "red",
-        message: "상담 세션 조회 중 오류가 발생했습니다.",
+        message: "현재 진행 중인 상담이 없습니다.",
       });
     }
-  };
+  } catch (error) {
+    console.error("❌ Error:", error);
+    notifications.show({
+      color: "red",
+      message: "상담 세션 조회 중 오류가 발생했습니다.",
+    });
+  }
+};
 
   return (
     <>

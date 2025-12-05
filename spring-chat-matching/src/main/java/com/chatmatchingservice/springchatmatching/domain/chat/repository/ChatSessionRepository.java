@@ -44,5 +44,5 @@
 
         List<Object[]> findHistoryOfCounselor(Long counselorId);
         List<Object[]> findAllHistory();
-
+        Long findActiveSessionId(Long counselorId);
     }

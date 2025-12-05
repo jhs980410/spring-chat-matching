@@ -390,4 +390,9 @@ public class ChatSessionService {
         return o == null ? null : o.toString();
     }
 
+
+    public Long getActiveSessionId(Long counselorId) {
+        Long sessionId = chatSessionRepository.findActiveSessionId(counselorId);
+        return sessionId != null ? sessionId : 0L;
+    }
 }

@@ -247,4 +247,24 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
         return em.createNativeQuery(sql)
                 .getResultList();
     }
+
+
+    @Override
+    public Long findActiveSessionId(Long counselorId) {
+        String sql = """
+        SELECT s.id
+        FROM chat_session s
+        WHERE s.counselor_id = :counselorId
+          AND s.status IN ('IN_PROGRESS', 'AFTER_CALL')
+        LIMIT 1
+    """;
+
+        List<Object> list = em.createNativeQuery(sql)
+                .setParameter("counselorId", counselorId)
+                .getResultList();
+
+        if (list.isEmpty()) return null;
+        return ((Number) list.get(0)).longValue();
+    }
+
 }

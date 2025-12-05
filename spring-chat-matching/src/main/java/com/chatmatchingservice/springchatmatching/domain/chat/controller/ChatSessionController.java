@@ -65,17 +65,17 @@ public class ChatSessionController {
     // 3. 상담사가 진행중 세션 확인
     // ============================================
     @GetMapping("/active")
-    public ResponseEntity<SessionInfoResponse> getActiveSession(
-            Authentication auth
-    ) {
+    public ResponseEntity<ActiveSessionResponse> getActiveSession(Authentication auth) {
         Long counselorId = (Long) auth.getPrincipal();
-        log.info("[API] Get active session : counselorId={}", counselorId);
+        Long sessionId = chatSessionService.getActiveSessionId(counselorId);
 
-        SessionInfoResponse res =
-                chatSessionService.getActiveSession(counselorId);
-
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(
+                ActiveSessionResponse.builder()
+                        .sessionId(sessionId)
+                        .build()
+        );
     }
+
 
 
     // ============================================
