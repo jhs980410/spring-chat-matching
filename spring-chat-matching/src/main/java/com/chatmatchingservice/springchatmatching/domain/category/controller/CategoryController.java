@@ -11,25 +11,35 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/domains/{domainId}/categories")
+@RequestMapping("/api/categories")
 @RequiredArgsConstructor
 @Slf4j
 public class CategoryController {
 
     private final CategoryService service;
 
-    @PostMapping
+    // ========================================
+    // 1) 전체 조회 or 도메인별 조회
+    // ========================================
+    @GetMapping
+    public ResponseEntity<List<CategoryResponse>> get(
+            @RequestParam(required = false) Long domainId
+    ) {
+        if (domainId == null) {
+            return ResponseEntity.ok(service.findAll());
+        }
+        return ResponseEntity.ok(service.findByDomain(domainId));
+    }
+
+
+    // ========================================
+    // 2) 카테고리 생성 (도메인 하위)
+    // ========================================
+    @PostMapping("/domains/{domainId}")
     public ResponseEntity<CategoryResponse> create(
             @PathVariable Long domainId,
             @RequestBody CategoryRequest req
     ) {
         return ResponseEntity.ok(service.create(domainId, req));
-    }
-
-    @GetMapping
-    public ResponseEntity<List<CategoryResponse>> getByDomain(
-            @PathVariable Long domainId
-    ) {
-        return ResponseEntity.ok(service.findByDomain(domainId));
     }
 }

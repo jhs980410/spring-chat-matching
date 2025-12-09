@@ -125,23 +125,23 @@ public class ChatSessionController {
     @PatchMapping("/{sessionId}/end")
     public ResponseEntity<String> endSession(
             @PathVariable Long sessionId,
-            @RequestBody EndSessionRequest request,
+            @RequestBody(required = false) EndSessionRequest request,
             Authentication auth
     ) {
         Long actorId = (Long) auth.getPrincipal();
 
         log.info("[API] End session : sessionId={}, actorId={}, reason={}",
-                sessionId, actorId, request.reason());
+                sessionId, actorId,
+                request != null ? request.reason() : null);
 
         chatSessionService.endSession(
                 sessionId,
                 actorId,
-                request.reason()
+                request != null ? request.reason() : null
         );
 
         return ResponseEntity.ok("ENDED");
     }
-
     // ============================================
 // 7. 세션 단건 상세 조회
 // ============================================

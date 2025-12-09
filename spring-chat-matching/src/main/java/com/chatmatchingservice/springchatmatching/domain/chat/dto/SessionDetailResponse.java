@@ -19,6 +19,7 @@ public record SessionDetailResponse(
 
         String domainName,
         String categoryName,
+        Long categoryId,
 
         String requestedAt,
         String assignedAt,
@@ -37,7 +38,7 @@ public record SessionDetailResponse(
 ) {
 
     // ---------------------------------------------------------------------
-    // 🔥 정적 팩토리 메서드 (핵심)
+    // 🔥 정적 팩토리 메서드
     // ---------------------------------------------------------------------
     public static SessionDetailResponse of(
             Object[] s,                // 세션 메인 정보
@@ -68,24 +69,25 @@ public record SessionDetailResponse(
 
         // === 세션 메인 ===
         return new SessionDetailResponse(
-                toLong(s[0]),
-                toStringVal(s[1]),
+                toLong(s[0]),   // sessionId
+                toStringVal(s[1]), // status
 
-                toLong(s[2]),
-                toStringVal(s[3]),
-                toStringVal(s[4]),
+                toLong(s[2]),   // userId
+                toStringVal(s[3]), // userName
+                toStringVal(s[4]), // userEmail
 
-                toLong(s[5]),
-                toStringVal(s[6]),
+                toLong(s[5]),   // counselorId
+                toStringVal(s[6]), // counselorName
 
-                toStringVal(s[7]),
-                toStringVal(s[8]),
+                toStringVal(s[7]), // domainName
+                toStringVal(s[8]), // categoryName
+                toLong(s[9]),      // categoryId  ← ⭐️ 추가된 부분
 
-                toStringVal(s[9]),
-                toStringVal(s[10]),
-                toStringVal(s[11]),
-                toStringVal(s[12]),
-                toLong(s[13]),
+                toStringVal(s[10]), // requestedAt
+                toStringVal(s[11]), // assignedAt
+                toStringVal(s[12]), // startedAt
+                toStringVal(s[13]), // endedAt
+                toLong(s[14]),      // durationSec
 
                 messageList,
 

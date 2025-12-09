@@ -20,13 +20,6 @@ interface MessageItem {
   createdAt: string | null;
 }
 
-interface AfterCallLog {
-  satisfactionScore?: number;
-  afterCallSec?: number;
-  feedback?: string;
-  endedAt?: string;
-}
-
 interface SessionDetail {
   sessionId: number;
   status: string;
@@ -48,7 +41,12 @@ interface SessionDetail {
   durationSec?: number;
 
   messages: MessageItem[];
-  afterCall?: AfterCallLog;
+
+  // flat 형태
+  satisfactionScore?: number;
+  afterCallSec?: number;
+  feedback?: string;
+  afterCallEndedAt?: string;
 }
 
 export default function SessionDetailPage() {
@@ -81,7 +79,7 @@ export default function SessionDetailPage() {
         상담 상세 정보 #{session.sessionId}
       </Title>
 
-      {/* 고객 정보/ 상담사 정보 */}
+      {/* 고객 정보 / 상담사 정보 */}
       <Group align="flex-start" grow mb="xl">
         <Card withBorder radius="md" p="md">
           <Title order={5} mb="sm">
@@ -174,9 +172,7 @@ export default function SessionDetailPage() {
                 </Text>
                 <Text size="sm">{msg.message}</Text>
                 <Text size="xs" c="dimmed">
-                  {msg.createdAt
-                    ? msg.createdAt.substring(11, 19)
-                    : "-"}
+                  {msg.createdAt ? msg.createdAt.substring(11, 19) : "-"}
                 </Text>
               </div>
             ))}
@@ -190,16 +186,16 @@ export default function SessionDetailPage() {
           상담 로그 (After-Call)
         </Title>
 
-        {session.afterCall ? (
+        {session.satisfactionScore !== undefined ? (
           <>
             <Text size="sm">
-              만족도: {session.afterCall.satisfactionScore ?? "-"}
+              만족도: {session.satisfactionScore ?? "-"}
             </Text>
             <Text size="sm">
-              After-call 시간: {session.afterCall.afterCallSec ?? "-"} 초
+              After-call 시간: {session.afterCallSec ?? "-"} 초
             </Text>
             <Text size="sm">
-              종료 시각: {session.afterCall.endedAt ?? "-"}
+              종료 시각: {session.afterCallEndedAt ?? "-"}
             </Text>
 
             <Divider my="sm" />
@@ -208,7 +204,7 @@ export default function SessionDetailPage() {
               상담 피드백
             </Text>
             <Text size="sm" c="dimmed">
-              {session.afterCall.feedback ?? "피드백 없음"}
+              {session.feedback ?? "피드백 없음"}
             </Text>
           </>
         ) : (

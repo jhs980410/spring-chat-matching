@@ -33,7 +33,7 @@ public class CounselorStatusService {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
 
         // 상태 설정
-        redisRepository.setCounselorStatus(counselorId, CounselorStatus.ONLINE.name());
+        redisRepository.setCounselorStatus(counselorId, CounselorStatus.READY.name());
 
         // load 초기화
         redisRepository.setCounselorLoad(counselorId, ZERO_LOAD);

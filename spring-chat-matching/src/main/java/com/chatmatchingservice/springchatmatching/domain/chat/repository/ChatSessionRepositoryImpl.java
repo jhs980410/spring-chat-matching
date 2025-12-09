@@ -134,6 +134,7 @@ public class ChatSessionRepositoryImpl implements ChatSessionRepository {
             cu.nickname AS counselorName,
             d.name AS domainName,
             c.name AS categoryName,
+            c.id AS categoryId,
             s.requested_at,
             s.assigned_at,
             s.started_at,

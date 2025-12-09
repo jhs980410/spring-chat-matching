@@ -4,5 +4,6 @@ public enum CounselorStatus {
     ONLINE,
     BUSY,
     AFTER_CALL,
-    OFFLINE
+    OFFLINE,
+    READY
 }

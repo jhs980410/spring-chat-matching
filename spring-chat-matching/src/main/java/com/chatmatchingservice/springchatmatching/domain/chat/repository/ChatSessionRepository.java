@@ -1,6 +1,7 @@
     package com.chatmatchingservice.springchatmatching.domain.chat.repository;
     
     import com.chatmatchingservice.springchatmatching.domain.chat.entity.ChatSession;
+    import org.springframework.data.jpa.repository.Modifying;
     import org.springframework.data.jpa.repository.Query;
     import org.springframework.data.repository.query.Param;
     
@@ -45,4 +46,6 @@
         List<Object[]> findHistoryOfCounselor(Long counselorId);
         List<Object[]> findAllHistory();
         Long findActiveSessionId(Long counselorId);
+
+
     }
