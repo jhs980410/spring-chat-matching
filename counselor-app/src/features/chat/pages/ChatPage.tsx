@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Grid, Title, Card, Loader, Center } from "@mantine/core";
+
 import api from "../../../api/axios";
 
 import ChatUserInfo from "../components/ChatUserInfo";
@@ -9,20 +10,33 @@ import ChatWindow from "../components/ChatWindow";
 import ChatInput from "../components/ChatInput";
 import ChatStatusPanel from "../components/ChatStatusPanel";
 
-import type { SessionInfo, ChatMessage } from "../../../types/index";
+import { useWS } from "../../providers/useWS";
+import type { SessionInfo, ChatMessage } from "../../../types";
 
 export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const sid = Number(sessionId);
+
+  const ws = useWS();
 
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ================================
-  // API 요청
-  // ================================
+  // ============================================================
+  // 1) sessionId가 바뀔 때, 기존 데이터 초기화
+  // ============================================================
+  useEffect(() => {
+    setSession(null);
+    setMessages([]);
+    setLoading(true);
+    setError("");
+  }, [sid]);
+
+  // ============================================================
+  // 2) HTTP API로 초기 세션 정보 + 기존 메시지 로드
+  // ============================================================
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -45,9 +59,43 @@ export default function ChatPage() {
     fetchData();
   }, [sid]);
 
-  // ================================
-  // 로딩 처리
-  // ================================
+  // ============================================================
+  // 3) WebSocket 실시간 메시지 구독
+  // ============================================================
+  useEffect(() => {
+    if (!ws) {
+      console.log("[WS] 아직 연결되지 않음");
+      return;
+    }
+    if (!session) return;
+
+    const topic = `/sub/session/${sid}`;
+    console.log("[WS] SUBSCRIBE:", topic);
+
+    const subscription = ws.subscribe(topic, (msg) => {
+      try {
+        const data = JSON.parse(msg.body);
+        console.log("[WS] RECEIVE:", data);
+
+        setMessages((prev) => [...prev, data]);
+      } catch (err) {
+        console.error("[WS] JSON Parse Error:", err);
+      }
+    });
+
+    return () => {
+  try {
+    subscription?.unsubscribe();
+    console.log("[WS] UNSUBSCRIBE:", topic);
+  } catch (e) {
+    console.warn("[WS] unsubscribe 실패:", e);
+  }
+};
+  }, [ws, session, sid]);
+
+  // ============================================================
+  // 4) 로딩 상태
+  // ============================================================
   if (loading) {
     return (
       <Center mt="xl">
@@ -56,9 +104,9 @@ export default function ChatPage() {
     );
   }
 
-  // ================================
-  // 에러 처리
-  // ================================
+  // ============================================================
+  // 5) 에러 또는 세션 없음
+  // ============================================================
   if (error || !session) {
     return (
       <Title order={2} c="red">
@@ -67,9 +115,9 @@ export default function ChatPage() {
     );
   }
 
-  // ================================
-  // UI 렌더링
-  // ================================
+  // ============================================================
+  // 6) UI 렌더링
+  // ============================================================
   return (
     <>
       <Title order={2} mb="md">
@@ -77,21 +125,22 @@ export default function ChatPage() {
       </Title>
 
       <Grid gutter="xl">
-        {/* LEFT (사용자 정보) */}
         <Grid.Col span={3}>
           <ChatUserInfo session={session} />
         </Grid.Col>
 
-        {/* CENTER (실제 채팅) */}
         <Grid.Col span={6}>
           <Card withBorder shadow="sm" p="md" radius="md">
             <ChatHeader session={session} />
+
+            {/* 🔥 실시간 메시지 표시 */}
             <ChatWindow messages={messages} />
-            <ChatInput sessionId={sid} />
+
+            {/* 🔥 메시지 전송 시 UI 업데이트 setMessages 전달 */}
+            <ChatInput sessionId={sid} onNewMessage={setMessages} />
           </Card>
         </Grid.Col>
 
-        {/* RIGHT (상담 상태 및 AfterCall) */}
         <Grid.Col span={3}>
           <ChatStatusPanel session={session} />
         </Grid.Col>

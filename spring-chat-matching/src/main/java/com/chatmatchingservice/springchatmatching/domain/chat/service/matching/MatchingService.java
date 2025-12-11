@@ -8,6 +8,7 @@ import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,8 @@ public class MatchingService {
     private final RedisRepository redisRepository;
     private final ChatSessionRepository chatSessionRepository;
     private final MessageFactory messageFactory;
+
+    private final SimpMessagingTemplate messagingTemplate;  // 🔥 추가
 
     @FunctionalInterface
     public interface MatchingAlgorithm {
@@ -57,9 +60,9 @@ public class MatchingService {
 
                 String status = redisRepository.getCounselorStatus(id);
 
-                // 🔥 [CHANGE POINT #1] READY 만 매칭 대상
+                // 🔥 READY 상담사만 매칭
                 if (!"READY".equals(status)) {
-                    log.debug("[Matching] counselorId={} 상태={} → 매칭 대상 제외", id, status);
+                    log.debug("[Matching] counselorId={} 상태={} → 매칭 제외", id, status);
                     continue;
                 }
 
@@ -71,7 +74,7 @@ public class MatchingService {
             }
 
             if (candidates.isEmpty()) {
-                log.debug("[Matching] categoryId={} 매칭 가능한 READY 상담사 없음", categoryId);
+                log.debug("[Matching] categoryId={} READY 상담사 없음", categoryId);
                 return;
             }
 
@@ -84,6 +87,9 @@ public class MatchingService {
                 return;
             }
 
+            // ================================
+            // 1) DB 업데이트
+            // ================================
             try {
                 chatSessionRepository.assignCounselor(sessionId, selected.counselorId());
                 chatSessionRepository.markSessionStarted(sessionId);
@@ -92,13 +98,18 @@ public class MatchingService {
                 return;
             }
 
-            // 🔥 [CHANGE POINT #2] 매칭된 상담사는 BUSY로 변경
+            // ================================
+            // 2) Redis 업데이트
+            // ================================
             redisRepository.incrementCounselorLoad(selected.counselorId(), 1);
             redisRepository.setCounselorStatus(selected.counselorId(), "BUSY");
 
             redisRepository.setSessionStatus(sessionId, "IN_PROGRESS");
             redisRepository.setSessionCounselor(sessionId, selected.counselorId());
 
+            // ================================
+            // 3) 기존 메시지 핸들러 호출 (내부 시스템 메시지 저장)
+            // ================================
             WSMessage assigned = new WSMessage(
                     "ASSIGNED",
                     String.valueOf(sessionId),
@@ -110,6 +121,19 @@ public class MatchingService {
 
             MessageHandler handler = messageFactory.getHandler(assigned);
             handler.handle(assigned);
+
+            // ================================
+            // 4) 🔥 상담사에게 WebSocket PUSH
+            // ================================
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "MATCH_ASSIGNED");
+            payload.put("sessionId", sessionId);
+
+            // 테스트 페이지 및 프론트 모두 "/sub" prefix 사용 중
+            messagingTemplate.convertAndSend(
+                    "/sub/counselor/" + selected.counselorId(),
+                    payload
+            );
 
             log.info("[Matching] 매칭 성공: categoryId={}, sessionId={}, counselorId={}",
                     categoryId, sessionId, selected.counselorId());

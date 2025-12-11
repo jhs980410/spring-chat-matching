@@ -1,37 +1,64 @@
-import { Card, Text } from "@mantine/core";
-import type { SessionInfo } from "../../../types"; // 🔥 외부 타입 import (중복 선언 제거)
+import { useState } from "react";
+import { TextInput, Button, Group } from "@mantine/core";
+import { useWS } from "../../providers/useWS";
+import { useAuthStore } from "../../../stores/authStore";
+import type { ChatMessage } from "./ChatWindow";
 
 interface Props {
-  session: SessionInfo | null;  // 🔥 null 허용하게 변경
+  sessionId: number;
+  onNewMessage?: (updater: (prev: ChatMessage[]) => ChatMessage[]) => void;
 }
 
-export default function ChatUserInfo({ session }: Props) {
-  // 🔥 안전장치: session이 아직 null이면 렌더하지 않음
-  if (!session) {
-    return (
-      <Card withBorder shadow="sm" p="md" radius="md">
-        <Text size="sm" c="dimmed">
-          세션 정보를 불러오는 중...
-        </Text>
-      </Card>
-    );
-  }
+export default function ChatInput({ sessionId, onNewMessage }: Props) {
+  const ws = useWS();
+  const counselorId = useAuthStore((s) => s.counselorId);
+  const [text, setText] = useState("");
+
+  const sendMessage = () => {
+    if (!text.trim()) return;
+
+    if (!ws) {
+      console.warn("[WS] Not connected. message not sent.");
+      return;
+    }
+
+    const payload: ChatMessage = {
+      messageId: Date.now(),
+      senderType: "COUNSELOR",
+      senderId: counselorId!,
+      message: text,
+      timestamp: Date.now(),
+    };
+
+    // =============================
+    // 서버에 메시지 전송
+    // =============================
+    try {
+      ws.send(`/pub/session/${sessionId}`, {}, JSON.stringify(payload));
+    } catch (e) {
+      console.error("[WS] SEND ERROR:", e);
+    }
+
+    // =============================
+    // UI에도 즉시 반영
+    // =============================
+    if (onNewMessage) {
+      onNewMessage((prev) => [...prev, payload]);
+    }
+
+    setText("");
+  };
 
   return (
-    <Card withBorder shadow="sm" p="md" radius="md">
-      <Text fw={700}>고객 정보</Text>
-
-      <Text size="sm">이름: {session.userName}</Text>
-      <Text size="sm">이메일: {session.userEmail}</Text>
-
-      <Text size="sm" mt="xs">
-        도메인: {session.domainName}
-      </Text>
-      <Text size="sm">카테고리: {session.categoryName}</Text>
-
-      <Text size="sm" mt="xs" c="dimmed">
-        요청 시각: {session.requestedAt ?? "-"}
-      </Text>
-    </Card>
+    <Group mt="md">
+      <TextInput
+        placeholder="메시지를 입력하세요"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        style={{ flex: 1 }}
+        onKeyDown={(e) => e.key === "Enter" && sendMessage()} // ⭐ Enter 전송 추가
+      />
+      <Button onClick={sendMessage}>전송</Button>
+    </Group>
   );
 }

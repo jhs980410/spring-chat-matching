@@ -10,7 +10,6 @@ import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.config.annotation.*;
 import org.springframework.web.socket.handler.WebSocketHandlerDecorator;
-
 @Configuration
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
@@ -21,10 +20,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-
         registry.addEndpoint("/ws/connect")
-                .setAllowedOriginPatterns("*");
-
+                .setAllowedOriginPatterns("*"); // CORS 허용
 
         log.info("🔌 WebSocket STOMP Endpoint 등록 완료: /ws/connect");
     }
@@ -32,10 +29,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
 
-//        registry.enableSimpleBroker("/sub");
+        // 🔥 반드시 필요 — /sub 브로커 활성화
+        registry.enableSimpleBroker("/sub");
+
+        // 🔥 클라이언트 메시지 → @MessageMapping("/session/...") 으로 전달
         registry.setApplicationDestinationPrefixes("/pub");
 
-        log.info("📡 STOMP MessageBroker 활성화: sub=/sub, pub=/pub");
+        log.info("📡 STOMP Broker 설정 완료: enableSimpleBroker=/sub, prefix=/pub");
     }
 
     @Override
@@ -47,16 +47,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .queueCapacity(1000);
 
         registration.interceptors(stompHandler);
-        // ⭐ 핵심 조치: SecurityContext 전파 인터셉터 추가
-           registration.interceptors(new SecurityContextChannelInterceptor());
-        log.info("🛡 StompHandler + 단일 스레드 inbound 적용 완료");
+        registration.interceptors(new SecurityContextChannelInterceptor());
+
+        log.info("🛡 inboundChannel 설정 완료");
     }
 
-    //Spring Boot 3.x / Spring Messaging 6.x 환경에서 principal 유실 문제를 해결하는 “정식 솔루션”
     @Override
     public void configureWebSocketTransport(WebSocketTransportRegistration registry) {
 
-        // 최신 Spring Boot 방식
         registry.addDecoratorFactory(handler -> new WebSocketHandlerDecorator(handler) {
             @Override
             public void handleMessage(WebSocketSession session, WebSocketMessage<?> message)
@@ -67,6 +65,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             }
         });
 
-        log.info("🔥 Transport Decorator 적용됨 (프레임 순서 보정 활성화)");
+        log.info("🔥 WebSocketTransport Decorator 적용됨");
     }
 }

@@ -9,25 +9,21 @@ declare module "stompjs" {
   export interface Client {
     connect(
       headers: Record<string, string>,
-      onConnect: () => void,
-      onError?: (error: string) => void
+      onConnect: (frame?: any) => void,
+      onError?: (error: any) => void
     ): void;
 
-    subscribe(
-      destination: string,
-      callback: (message: Message) => void,
-      headers?: Record<string, string>
-    ): { id: string };
+   subscribe(
+  destination: string,
+  callback: (message: Message) => void,
+  headers?: Record<string, string>
+): { id: string; unsubscribe: () => void };
 
-    send(
-      destination: string,
-      headers: Record<string, string>,
-      body: string
-    ): void;
+    send(destination: string, headers: Record<string, string>, body: string): void;
 
     disconnect(callback?: () => void): void;
   }
 
+  export function client(url: string): Client;
   export function over(socket: any): Client;
-  export default { over };
 }
