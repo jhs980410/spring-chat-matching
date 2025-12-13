@@ -1,3 +1,4 @@
+// main.tsx
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { MantineProvider } from "@mantine/core";
@@ -7,15 +8,14 @@ import { BrowserRouter } from "react-router-dom";
 import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import "@mantine/charts/styles.css";
-import App from "./App";
+
+import WebSocketRoot from "./features/providers/WebSocketRoot";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  // <React.StrictMode>
-    <MantineProvider defaultColorScheme="light">
-      <Notifications position="top-right" />
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </MantineProvider>
-  // </React.StrictMode>
+  <MantineProvider defaultColorScheme="light">
+    <Notifications position="top-right" />
+    <BrowserRouter>
+      <WebSocketRoot />
+    </BrowserRouter>
+  </MantineProvider>
 );

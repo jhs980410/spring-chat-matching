@@ -12,7 +12,6 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
 
-  // handleLogin 함수는 컴포넌트 함수 LoginPage 내부에 완전히 정의되어야 합니다.
   const handleLogin = async () => {
     try {
       const res = await api.post("/auth/counselor/login", {
@@ -20,7 +19,8 @@ export default function LoginPage() {
         password: pwd,
       });
 
-      login(res.data.userId, res.data.accessToken);
+      // ✅ 핵심 수정 포인트
+      login(res.data.id, res.data.accessToken);
 
       notifications.show({
         title: "로그인 성공",
@@ -37,9 +37,8 @@ export default function LoginPage() {
         message: "이메일 또는 비밀번호를 확인하세요",
       });
     }
-  }; // <--- handleLogin 함수는 여기서 닫힙니다. (JSX return 이전에)
+  };
 
-  // LoginPage 컴포넌트 함수는 여기서 JSX를 반환합니다.
   return (
     <div style={{ width: 320, margin: "80px auto" }}>
       <Card padding="lg" shadow="sm">
@@ -47,7 +46,13 @@ export default function LoginPage() {
           상담사 로그인
         </Title>
 
-        <TextInput label="Email" value={email} onChange={(e) => setEmail(e.target.value)} mb="md" />
+        <TextInput
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          mb="md"
+        />
+
         <TextInput
           label="Password"
           value={pwd}
@@ -63,4 +68,3 @@ export default function LoginPage() {
     </div>
   );
 }
-// 불필요한 마지막 닫는 중괄호를 제거했습니다.

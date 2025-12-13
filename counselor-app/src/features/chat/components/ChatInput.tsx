@@ -1,3 +1,4 @@
+// ChatInput.tsx
 import { useState } from "react";
 import { TextInput, Button, Group } from "@mantine/core";
 import { useWS } from "../../providers/useWS";
@@ -6,45 +7,51 @@ import type { ChatMessage } from "./ChatWindow";
 
 interface Props {
   sessionId: number;
-  onNewMessage?: (updater: (prev: ChatMessage[]) => ChatMessage[]) => void;
+  onNewMessage: (updater: (prev: ChatMessage[]) => ChatMessage[]) => void;
 }
 
 export default function ChatInput({ sessionId, onNewMessage }: Props) {
-  const ws = useWS();
+  const { client, connected } = useWS();
   const counselorId = useAuthStore((s) => s.counselorId);
   const [text, setText] = useState("");
 
   const sendMessage = () => {
     if (!text.trim()) return;
-
-    if (!ws) {
-      console.warn("[WS] Not connected. message not sent.");
+    if (!connected || !client) {
+      console.warn("[WS] not connected, message blocked");
       return;
     }
 
-    const payload: ChatMessage = {
-      messageId: Date.now(),
-      senderType: "COUNSELOR",
-      senderId: counselorId!,
+    // 🔹 서버로 전송할 payload
+    const payload = {
+      type: "MESSAGE",
+      sessionId,
       message: text,
       timestamp: Date.now(),
     };
 
-    // =============================
-    // 서버에 메시지 전송
-    // =============================
     try {
-      ws.send(`/pub/session/${sessionId}`, {}, JSON.stringify(payload));
+      client.send(
+        `/pub/session/${sessionId}`,
+        {},
+        JSON.stringify(payload)
+      );
     } catch (e) {
-      console.error("[WS] SEND ERROR:", e);
+      console.error("[WS] send error", e);
+      return;
     }
 
-    // =============================
-    // UI에도 즉시 반영
-    // =============================
-    if (onNewMessage) {
-      onNewMessage((prev) => [...prev, payload]);
-    }
+    // 🔹 optimistic UI 업데이트
+    onNewMessage((prev) => [
+      ...prev,
+      {
+        messageId: Date.now(), // 임시 ID
+        senderType: "COUNSELOR",
+        senderId: counselorId ?? 0,
+        message: text,
+        timestamp: payload.timestamp,
+      },
+    ]);
 
     setText("");
   };
@@ -52,13 +59,24 @@ export default function ChatInput({ sessionId, onNewMessage }: Props) {
   return (
     <Group mt="md">
       <TextInput
-        placeholder="메시지를 입력하세요"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        placeholder={
+          connected ? "메시지를 입력하세요" : "연결 중입니다..."
+        }
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+          }
+        }}
         style={{ flex: 1 }}
-        onKeyDown={(e) => e.key === "Enter" && sendMessage()} // ⭐ Enter 전송 추가
+        disabled={!connected}
       />
-      <Button onClick={sendMessage}>전송</Button>
+
+      <Button onClick={sendMessage} disabled={!connected || !text.trim()}>
+        전송
+      </Button>
     </Group>
   );
 }

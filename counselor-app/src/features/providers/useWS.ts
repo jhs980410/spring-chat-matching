@@ -1,4 +1,7 @@
+// features/providers/useWS.ts
 import { useContext } from "react";
-import { WebSocketContext } from "./WebSocketContext";
+import { WSContext } from "./WSContext";
 
-export const useWS = () => useContext(WebSocketContext);
+export const useWS = () => {
+  return useContext(WSContext);
+};

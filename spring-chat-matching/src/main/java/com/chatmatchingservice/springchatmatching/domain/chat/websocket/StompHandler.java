@@ -43,24 +43,21 @@ public class StompHandler implements ChannelInterceptor {
             switch (command) {
                 case CONNECT -> handleConnect(accessor);
                 case SUBSCRIBE -> handleSubscribe(accessor);
-                case SEND -> handleSend(accessor);         // ⭐ 추가된 라인
+                case SEND -> handleSend(accessor);
                 case DISCONNECT -> handleDisconnect(accessor);
             }
-
         } catch (CustomException e) {
             log.error("[WS][StompHandler] {} CustomException: code={}, msg={}",
                     command, e.getErrorCode().getCode(), e.getMessage());
-            throw e;
-
+            // ❗❗ throw 금지
         } catch (Exception e) {
-            log.error("[WS][StompHandler] {} 처리 중 예상치 못한 예외: {}",
-                    command, e.getMessage(), e);
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            log.error("[WS][StompHandler] {} unexpected error",
+                    command, e);
+            // ❗❗ throw 금지
         }
 
         return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
     }
-
     // =====================================================
     // CONNECT — JWT 인증
     // =====================================================
@@ -118,64 +115,108 @@ public class StompHandler implements ChannelInterceptor {
     private void handleSubscribe(StompHeaderAccessor accessor) {
 
         Principal principal = restorePrincipal(accessor, StompCommand.SUBSCRIBE);
-
         String destination = accessor.getDestination();
-        log.info("[FRAME] {} / sessionId={}, principal={}",
-                accessor.getCommand(), accessor.getSessionId(), principal);
 
+        log.info("[FRAME][SUBSCRIBE] wsSessionId={}, dest={}, principal={}",
+                accessor.getSessionId(), destination, principal);
+
+        // ===============================
+        // 1️⃣ destination 없음 → 무시
+        // ===============================
         if (!StringUtils.hasText(destination)) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            log.warn("[WS][SUBSCRIBE] destination empty");
+            return;
         }
 
+        // ===============================
+        // 2️⃣ 상담사 알림 채널 허용
+        // ===============================
+        if (destination.startsWith("/sub/counselor/")) {
+            log.info("[WS][SUBSCRIBE] counselor channel allowed: {}", destination);
+            return;
+        }
+
+        // ===============================
+        // 3️⃣ 세션 채널만 검증
+        // ===============================
         if (!destination.startsWith("/sub/session/")) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            log.warn("[WS][SUBSCRIBE] invalid destination: {}", destination);
+            return;
         }
 
+        // ===============================
+        // 4️⃣ principal 검증
+        // ===============================
         if (!(principal instanceof ChatPrincipal chatPrincipal)) {
-            throw new CustomException(ErrorCode.UNAUTHORIZED);
+            log.warn("[WS][SUBSCRIBE] invalid principal: {}", principal);
+            return;
         }
 
+        // ===============================
+        // 5️⃣ sessionId 파싱
+        // ===============================
         Long sessionId = parseSessionId(destination);
         if (sessionId == null) {
-            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+            log.warn("[WS][SUBSCRIBE] invalid sessionId from dest={}", destination);
+            return;
         }
 
+        // ===============================
+        // 6️⃣ 세션 조회
+        // ===============================
         ChatSession session = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new CustomException(ErrorCode.SESSION_NOT_FOUND));
+                .orElse(null);
+
+        if (session == null) {
+            log.warn("[WS][SUBSCRIBE] session not found: {}", sessionId);
+            return;
+        }
 
         String role = chatPrincipal.getRole();
 
+        // ===============================
+        // 7️⃣ USER 권한 체크
+        // ===============================
         if ("USER".equals(role)) {
             if (!session.getUserId().equals(chatPrincipal.getId())) {
-                throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
+                log.warn("[WS][SUBSCRIBE] USER access denied: sessionId={}, userId={}",
+                        sessionId, chatPrincipal.getId());
+                return;
             }
         }
 
+        // ===============================
+        // 8️⃣ COUNSELOR 권한 체크
+        // ===============================
         if ("COUNSELOR".equals(role)) {
-            // 1. 상담사 권한 체크
+
             if (session.getCounselorId() == null ||
                     !session.getCounselorId().equals(chatPrincipal.getId())) {
-                throw new CustomException(ErrorCode.SESSION_ACCESS_DENIED);
+                log.warn("[WS][SUBSCRIBE] COUNSELOR access denied: sessionId={}, counselorId={}",
+                        sessionId, chatPrincipal.getId());
+                return;
             }
 
-            // 2.  시작 시간이 없는 경우에만 기록 시도 (중복 방지)
+            // 상담 시작 시간 기록 (1회)
             if (session.getStartedAt() == null) {
                 try {
-                    // ChatSessionRepositoryImpl -> Service (@Transactional)를 거쳐 DB에 저장
                     chatSessionRepository.markSessionStarted(sessionId);
                     log.info("[WS] 상담 시작 시간 기록 완료: sessionId={}, counselorId={}",
                             sessionId, chatPrincipal.getId());
                 } catch (Exception e) {
-                    // DB 접근 실패 시에도 상담은 진행되도록 예외만 로깅
                     log.error("[WS] started_at 저장 실패: sessionId={}, err={}",
                             sessionId, e.getMessage());
                 }
             }
         }
 
-        log.info("[WS] SUBSCRIBE 허용: sessionId={}, principal={}",
-                sessionId, chatPrincipal.getId());
+        // ===============================
+        // 9️⃣ 최종 허용 로그
+        // ===============================
+        log.info("[WS][SUBSCRIBE] 허용 완료: sessionId={}, principalId={}, role={}",
+                sessionId, chatPrincipal.getId(), role);
     }
+
 
     // =====================================================
     // SEND — principal 복원 (핵심)

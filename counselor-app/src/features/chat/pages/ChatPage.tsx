@@ -1,3 +1,4 @@
+// ChatPage.tsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Grid, Title, Card, Loader, Center } from "@mantine/core";
@@ -17,26 +18,26 @@ export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const sid = Number(sessionId);
 
-  const ws = useWS();
+  const { client, connected } = useWS();
 
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  // ============================================================
-  // 1) sessionId가 바뀔 때, 기존 데이터 초기화
-  // ============================================================
+  // =====================================
+  // 1️⃣ sessionId 변경 시 상태 초기화
+  // =====================================
   useEffect(() => {
     setSession(null);
     setMessages([]);
     setLoading(true);
-    setError("");
+    setError(null);
   }, [sid]);
 
-  // ============================================================
-  // 2) HTTP API로 초기 세션 정보 + 기존 메시지 로드
-  // ============================================================
+  // =====================================
+  // 2️⃣ 초기 세션 + 메시지 로드
+  // =====================================
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -56,46 +57,38 @@ export default function ChatPage() {
       }
     };
 
-    fetchData();
+    if (!Number.isNaN(sid)) {
+      fetchData();
+    }
   }, [sid]);
 
-  // ============================================================
-  // 3) WebSocket 실시간 메시지 구독
-  // ============================================================
+  // =====================================
+  // 3️⃣ WebSocket 실시간 메시지 구독
+  // =====================================
   useEffect(() => {
-    if (!ws) {
-      console.log("[WS] 아직 연결되지 않음");
-      return;
-    }
-    if (!session) return;
+    if (!connected || !client || !session) return;
 
     const topic = `/sub/session/${sid}`;
     console.log("[WS] SUBSCRIBE:", topic);
 
-    const subscription = ws.subscribe(topic, (msg) => {
+    const subscription = client.subscribe(topic, (msg) => {
       try {
-        const data = JSON.parse(msg.body);
-        console.log("[WS] RECEIVE:", data);
-
+        const data: ChatMessage = JSON.parse(msg.body);
         setMessages((prev) => [...prev, data]);
-      } catch (err) {
-        console.error("[WS] JSON Parse Error:", err);
+      } catch (e) {
+        console.error("[WS] message parse error", e);
       }
     });
 
     return () => {
-  try {
-    subscription?.unsubscribe();
-    console.log("[WS] UNSUBSCRIBE:", topic);
-  } catch (e) {
-    console.warn("[WS] unsubscribe 실패:", e);
-  }
-};
-  }, [ws, session, sid]);
+      console.log("[WS] UNSUBSCRIBE:", topic);
+      subscription.unsubscribe();
+    };
+  }, [connected, client, session, sid]);
 
-  // ============================================================
-  // 4) 로딩 상태
-  // ============================================================
+  // =====================================
+  // 4️⃣ 로딩 / 에러 처리
+  // =====================================
   if (loading) {
     return (
       <Center mt="xl">
@@ -104,20 +97,17 @@ export default function ChatPage() {
     );
   }
 
-  // ============================================================
-  // 5) 에러 또는 세션 없음
-  // ============================================================
   if (error || !session) {
     return (
       <Title order={2} c="red">
-        {error || "존재하지 않는 세션입니다."}
+        {error ?? "존재하지 않는 세션입니다."}
       </Title>
     );
   }
 
-  // ============================================================
-  // 6) UI 렌더링
-  // ============================================================
+  // =====================================
+  // 5️⃣ UI
+  // =====================================
   return (
     <>
       <Title order={2} mb="md">
@@ -130,13 +120,9 @@ export default function ChatPage() {
         </Grid.Col>
 
         <Grid.Col span={6}>
-          <Card withBorder shadow="sm" p="md" radius="md">
+          <Card withBorder shadow="sm" p="md">
             <ChatHeader session={session} />
-
-            {/* 🔥 실시간 메시지 표시 */}
             <ChatWindow messages={messages} />
-
-            {/* 🔥 메시지 전송 시 UI 업데이트 setMessages 전달 */}
             <ChatInput sessionId={sid} onNewMessage={setMessages} />
           </Card>
         </Grid.Col>
