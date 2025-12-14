@@ -1,9 +1,7 @@
 package com.chatmatchingservice.springchatmatching.domain.chat.controller;
 
-
 import com.chatmatchingservice.springchatmatching.domain.chat.service.message.MessageHandler;
 import com.chatmatchingservice.springchatmatching.domain.chat.websocket.MessageFactory;
-
 import com.chatmatchingservice.springchatmatching.global.auth.ChatPrincipal;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisPublisher;
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
@@ -13,11 +11,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.security.core.Authentication;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
 
-import java.security.Principal;
 import java.time.Instant;
+import java.util.Map;
 
 @Controller
 @RequiredArgsConstructor
@@ -27,32 +25,49 @@ public class ChatStompController {
     private final RedisPublisher redisPublisher;
     private final MessageFactory messageFactory;
     private final RedisRepository redisRepository;
+
     @MessageMapping("/session/{sessionId}")
-    public void sendMessage(@DestinationVariable String sessionId,
-                            @Payload WSMessage message,
-                            Principal principal) {
-
+    public void sendMessage(
+            @DestinationVariable String sessionId,
+            @Payload WSMessage message,
+            SimpMessageHeaderAccessor headerAccessor   // 🔥 핵심
+    ) {
         try {
-            if (principal == null) {
-                log.warn("[WS] Principal 없음, 메시지 무시: sessionId={}", sessionId);
+            /* ===============================
+             * 1. 세션에서 ChatPrincipal 복원
+             * =============================== */
+            Map<String, Object> sessionAttrs = headerAccessor.getSessionAttributes();
+            if (sessionAttrs == null) {
+                log.error("[WS] sessionAttributes 없음");
                 return;
             }
 
+            Object saved = sessionAttrs.get("WS_PRINCIPAL");
+            if (!(saved instanceof ChatPrincipal chatPrincipal)) {
+                log.error(
+                        "[WS] ChatPrincipal 없음 (session). actual={}",
+                        saved != null ? saved.getClass() : "null"
+                );
+                return;
+            }
+
+            /* ===============================
+             * 2. 세션 ID 검증
+             * =============================== */
             if (message.getSessionId() == null || !sessionId.equals(message.getSessionId())) {
-                log.warn("[WS] path 세션 ID와 payload 세션 ID 불일치: path={}, payload={}",
-                        sessionId, message.getSessionId());
+                log.warn(
+                        "[WS] path 세션 ID와 payload 세션 ID 불일치: path={}, payload={}",
+                        sessionId, message.getSessionId()
+                );
                 return;
             }
 
-            // 🔥 핵심: Authentication 으로 캐스팅 금지
-            if (!(principal instanceof ChatPrincipal chatPrincipal)) {
-                log.error("[WS] principal은 ChatPrincipal 이어야 함. 실제={}", principal.getClass());
-                return;
-            }
+            Long senderId = chatPrincipal.getId();
+            String role = chatPrincipal.getRole();
 
-            Long senderId = chatPrincipal.getId();      // principal.getName() 대신 우리 ID 사용
-            String role = chatPrincipal.getRole();      // USER / COUNSELOR
-
+            /* ===============================
+             * 3. 메시지 보강
+             * =============================== */
             WSMessage enriched = new WSMessage(
                     message.getType(),
                     sessionId,
@@ -64,17 +79,20 @@ public class ChatStompController {
                             : Instant.now().toEpochMilli()
             );
 
-            // 핸들러 실행
+            /* ===============================
+             * 4. 도메인 핸들러
+             * =============================== */
             MessageHandler handler = messageFactory.getHandler(enriched);
             handler.handle(enriched);
 
-            // Redis pub/sub
+            /* ===============================
+             * 5. Redis Pub/Sub
+             * =============================== */
             String channel = redisRepository.wsChannel(Long.valueOf(sessionId));
             redisPublisher.publish(channel, enriched);
 
         } catch (Exception e) {
-            log.error("[WS] sendMessage 처리 중 예외: {}", e.getMessage(), e);
+            log.error("[WS] sendMessage 처리 중 예외", e);
         }
     }
-
 }

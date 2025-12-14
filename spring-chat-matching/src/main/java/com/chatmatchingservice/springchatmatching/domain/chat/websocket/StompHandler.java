@@ -36,7 +36,6 @@ public class StompHandler implements ChannelInterceptor {
 
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
         StompCommand command = accessor.getCommand();
-
         if (command == null) return message;
 
         try {
@@ -47,40 +46,35 @@ public class StompHandler implements ChannelInterceptor {
                 case DISCONNECT -> handleDisconnect(accessor);
             }
         } catch (CustomException e) {
-            log.error("[WS][StompHandler] {} CustomException: code={}, msg={}",
-                    command, e.getErrorCode().getCode(), e.getMessage());
-            // ❗❗ throw 금지
+            log.error("[WS][{}] {}", command, e.getMessage());
         } catch (Exception e) {
-            log.error("[WS][StompHandler] {} unexpected error",
-                    command, e);
-            // ❗❗ throw 금지
+            log.error("[WS][{}] unexpected error", command, e);
         }
 
         return MessageBuilder.createMessage(message.getPayload(), accessor.getMessageHeaders());
     }
+
     // =====================================================
-    // CONNECT — JWT 인증
+    // CONNECT — JWT 인증 (ChatPrincipal만 사용)
     // =====================================================
     private void handleConnect(StompHeaderAccessor accessor) {
 
         String authHeader = accessor.getFirstNativeHeader("Authorization");
-
         if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
         String token = authHeader.substring(7);
-
         if (!jwtTokenProvider.validateToken(token)) {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
         var authentication = jwtTokenProvider.getAuthentication(token);
+
         String role = authentication.getAuthorities()
                 .iterator()
                 .next()
                 .getAuthority();
-
         if (role.startsWith("ROLE_")) {
             role = role.substring(5);
         }
@@ -92,145 +86,78 @@ public class StompHandler implements ChannelInterceptor {
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        ChatPrincipal principal = new ChatPrincipal(id, role);
+        // 🔥 핵심: ChatPrincipal만 생성
+        ChatPrincipal chatPrincipal = new ChatPrincipal(id, role);
 
-        // 프레임에 User 세팅
-        accessor.setUser(principal);
+        // 🔥 STOMP User = ChatPrincipal
+        accessor.setUser(chatPrincipal);
 
-        // 세션에도 저장
-        Map<String, Object> sessionAttributes = accessor.getSessionAttributes();
-        if (sessionAttributes != null) {
-            sessionAttributes.put("WS_PRINCIPAL", principal);
+        // 🔥 STOMP 세션에도 ChatPrincipal만 저장
+        Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
+        if (sessionAttrs != null) {
+            sessionAttrs.put("WS_PRINCIPAL", chatPrincipal);
         }
 
         accessor.setLeaveMutable(true);
 
-        log.info("[WS] CONNECT 성공: sessionId={}, principalId={}, role={}",
-                accessor.getSessionId(), id, role);
+        log.info("[WS] CONNECT 성공: wsSessionId={}, principal={}",
+                accessor.getSessionId(), chatPrincipal.getName());
     }
 
     // =====================================================
-    // SUBSCRIBE — 세션ID 기반 권한 체크
+    // SUBSCRIBE — 세션 접근 권한 검증
     // =====================================================
     private void handleSubscribe(StompHeaderAccessor accessor) {
 
-        Principal principal = restorePrincipal(accessor, StompCommand.SUBSCRIBE);
+        ChatPrincipal principal = restoreChatPrincipal(accessor, StompCommand.SUBSCRIBE);
+        if (principal == null) return;
+
         String destination = accessor.getDestination();
+        if (!StringUtils.hasText(destination)) return;
 
-        log.info("[FRAME][SUBSCRIBE] wsSessionId={}, dest={}, principal={}",
-                accessor.getSessionId(), destination, principal);
+        if (destination.startsWith("/sub/counselor/")) return;
+        if (!destination.startsWith("/sub/session/")) return;
 
-        // ===============================
-        // 1️⃣ destination 없음 → 무시
-        // ===============================
-        if (!StringUtils.hasText(destination)) {
-            log.warn("[WS][SUBSCRIBE] destination empty");
-            return;
-        }
-
-        // ===============================
-        // 2️⃣ 상담사 알림 채널 허용
-        // ===============================
-        if (destination.startsWith("/sub/counselor/")) {
-            log.info("[WS][SUBSCRIBE] counselor channel allowed: {}", destination);
-            return;
-        }
-
-        // ===============================
-        // 3️⃣ 세션 채널만 검증
-        // ===============================
-        if (!destination.startsWith("/sub/session/")) {
-            log.warn("[WS][SUBSCRIBE] invalid destination: {}", destination);
-            return;
-        }
-
-        // ===============================
-        // 4️⃣ principal 검증
-        // ===============================
-        if (!(principal instanceof ChatPrincipal chatPrincipal)) {
-            log.warn("[WS][SUBSCRIBE] invalid principal: {}", principal);
-            return;
-        }
-
-        // ===============================
-        // 5️⃣ sessionId 파싱
-        // ===============================
         Long sessionId = parseSessionId(destination);
-        if (sessionId == null) {
-            log.warn("[WS][SUBSCRIBE] invalid sessionId from dest={}", destination);
+        if (sessionId == null) return;
+
+        ChatSession session = chatSessionRepository.findById(sessionId).orElse(null);
+        if (session == null) return;
+
+        String role = principal.getRole();
+
+        if ("USER".equals(role) && !session.getUserId().equals(principal.getId())) {
+            log.warn("[WS][SUBSCRIBE] USER access denied");
             return;
         }
 
-        // ===============================
-        // 6️⃣ 세션 조회
-        // ===============================
-        ChatSession session = chatSessionRepository.findById(sessionId)
-                .orElse(null);
-
-        if (session == null) {
-            log.warn("[WS][SUBSCRIBE] session not found: {}", sessionId);
-            return;
-        }
-
-        String role = chatPrincipal.getRole();
-
-        // ===============================
-        // 7️⃣ USER 권한 체크
-        // ===============================
-        if ("USER".equals(role)) {
-            if (!session.getUserId().equals(chatPrincipal.getId())) {
-                log.warn("[WS][SUBSCRIBE] USER access denied: sessionId={}, userId={}",
-                        sessionId, chatPrincipal.getId());
-                return;
-            }
-        }
-
-        // ===============================
-        // 8️⃣ COUNSELOR 권한 체크
-        // ===============================
         if ("COUNSELOR".equals(role)) {
-
             if (session.getCounselorId() == null ||
-                    !session.getCounselorId().equals(chatPrincipal.getId())) {
-                log.warn("[WS][SUBSCRIBE] COUNSELOR access denied: sessionId={}, counselorId={}",
-                        sessionId, chatPrincipal.getId());
+                    !session.getCounselorId().equals(principal.getId())) {
+                log.warn("[WS][SUBSCRIBE] COUNSELOR access denied");
                 return;
             }
 
-            // 상담 시작 시간 기록 (1회)
             if (session.getStartedAt() == null) {
-                try {
-                    chatSessionRepository.markSessionStarted(sessionId);
-                    log.info("[WS] 상담 시작 시간 기록 완료: sessionId={}, counselorId={}",
-                            sessionId, chatPrincipal.getId());
-                } catch (Exception e) {
-                    log.error("[WS] started_at 저장 실패: sessionId={}, err={}",
-                            sessionId, e.getMessage());
-                }
+                chatSessionRepository.markSessionStarted(sessionId);
             }
         }
 
-        // ===============================
-        // 9️⃣ 최종 허용 로그
-        // ===============================
-        log.info("[WS][SUBSCRIBE] 허용 완료: sessionId={}, principalId={}, role={}",
-                sessionId, chatPrincipal.getId(), role);
+        log.info("[WS][SUBSCRIBE] 허용: sessionId={}, principal={}",
+                sessionId, principal.getName());
     }
 
-
     // =====================================================
-    // SEND — principal 복원 (핵심)
+    // SEND
     // =====================================================
     private void handleSend(StompHeaderAccessor accessor) {
 
-        Principal principal = restorePrincipal(accessor, StompCommand.SEND);
-
+        ChatPrincipal principal = restoreChatPrincipal(accessor, StompCommand.SEND);
         if (principal == null) {
-            log.warn("[WS] SEND 프레임 principal 없음: sessionId={}", accessor.getSessionId());
             throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
-        log.info("[WS] SEND principal OK: sessionId={}, principal={}",
+        log.info("[WS] SEND OK: wsSessionId={}, principal={}",
                 accessor.getSessionId(), principal.getName());
     }
 
@@ -239,62 +166,47 @@ public class StompHandler implements ChannelInterceptor {
     // =====================================================
     private void handleDisconnect(StompHeaderAccessor accessor) {
 
-        Principal principal = restorePrincipal(accessor, StompCommand.DISCONNECT);
-        String wsSessionId = accessor.getSessionId();
+        ChatPrincipal principal = restoreChatPrincipal(accessor, StompCommand.DISCONNECT);
+        if (principal == null) return;
 
-        log.info("[WS] DISCONNECT 감지: wsSessionId={}, principal={}",
-                wsSessionId, principal);
+        if ("USER".equals(principal.getRole())) {
+            redisRepository.setUserDisconnectTime(
+                    principal.getId(),
+                    System.currentTimeMillis()
+            );
 
-        if (!(principal instanceof ChatPrincipal chatPrincipal)) {
-            return; // 웹소켓 연결만 하고 SUBSCRIBE 안 한 경우
-        }
-
-        Long userId = chatPrincipal.getId();
-        String role = chatPrincipal.getRole();
-
-        // 1) 고객만 disconnect 감지 처리 (상담사는 무시)
-        if ("USER".equals(role)) {
-
-            // 🔥 Redis에 disconnect timestamp 저장
-            redisRepository.setUserDisconnectTime(userId, System.currentTimeMillis());
-
-            // 해당 유저가 참여한 세션 ID 조회
-            Long sessionId = redisRepository.getActiveSessionIdByUser(userId);
+            Long sessionId = redisRepository.getActiveSessionIdByUser(principal.getId());
             if (sessionId != null) {
-
-                // 상담사에게 “유저 이탈” 이벤트 발행
-                DisconnectNotice notice = DisconnectNotice.of(sessionId, userId);
-
-                redisRepository.publishToWsChannel(sessionId, notice);
-
-                log.warn("[WS] USER disconnect → 상담사에게 전달 완료: sessionId={}, userId={}",
-                        sessionId, userId);
+                redisRepository.publishToWsChannel(
+                        sessionId,
+                        DisconnectNotice.of(sessionId, principal.getId())
+                );
             }
         }
     }
 
-
     // =====================================================
-    // 공통 principal 복원 로직
+    // 공통: ChatPrincipal 복원
     // =====================================================
-    private Principal restorePrincipal(StompHeaderAccessor accessor, StompCommand cmd) {
+    private ChatPrincipal restoreChatPrincipal(StompHeaderAccessor accessor, StompCommand cmd) {
 
-        Principal principal = accessor.getUser();
+        Principal user = accessor.getUser();
+        if (user instanceof ChatPrincipal cp) {
+            return cp;
+        }
 
-        if (principal == null) {
-            Map<String, Object> attrs = accessor.getSessionAttributes();
-            if (attrs != null) {
-                Object saved = attrs.get("WS_PRINCIPAL");
-                if (saved instanceof Principal) {
-                    principal = (Principal) saved;
-                    accessor.setUser(principal);
-                    log.info("[WS] {} 시 principal 복원: sessionId={}, principal={}",
-                            cmd, accessor.getSessionId(), principal.getName());
-                }
+        Map<String, Object> attrs = accessor.getSessionAttributes();
+        if (attrs != null) {
+            Object saved = attrs.get("WS_PRINCIPAL");
+            if (saved instanceof ChatPrincipal cp) {
+                accessor.setUser(cp);
+                log.info("[WS] {} principal 복원: {}", cmd, cp.getName());
+                return cp;
             }
         }
 
-        return principal;
+        log.warn("[WS] {} ChatPrincipal 없음", cmd);
+        return null;
     }
 
     private Long parseSessionId(String dest) {
