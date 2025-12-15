@@ -1,13 +1,17 @@
 // features/providers/WSContext.ts
 import { createContext } from "react";
-import type { Client } from "stompjs";
 
 export type WSContextType = {
-  client: Client | null;
   connected: boolean;
+  subscribe: (
+    destination: string,
+    callback: (message: any) => void
+  ) => () => void;
+  send: (destination: string, payload: any) => void;
 };
 
 export const WSContext = createContext<WSContextType>({
-  client: null,
   connected: false,
+  subscribe: () => () => {},
+  send: () => {},
 });

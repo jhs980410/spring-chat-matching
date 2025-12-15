@@ -8,12 +8,19 @@ import "@mantine/notifications/styles.css";
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
 
+import { WSProvider } from "./api/providers/WSProvider";
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
       <MantineProvider>
         <Notifications />
-        <App />
+
+        {/* 🔥 WebSocket Provider는 App을 감싸야 한다 */}
+        <WSProvider>
+          <App />
+        </WSProvider>
+
       </MantineProvider>
     </BrowserRouter>
   </React.StrictMode>

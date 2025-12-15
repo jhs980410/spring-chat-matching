@@ -1,88 +1,75 @@
-import { useEffect } from "react";
-import { Button, Card, Text, Title } from "@mantine/core";
+import { Button, Card, TextInput, Title } from "@mantine/core";
+import { useState } from "react";
+import api from "../../api/axios";
+import { useAuthStore } from "../../stores/authStore";
+import { useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 
-import api from "../../api/axios";
-import { wsClient } from "../../ws/wsClient";
-import { useAuthStore } from "../../stores/authStore";
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [pwd, setPwd] = useState("");
 
-export default function WaitingPage() {
-  const userId = useAuthStore((s) => s.counselorId); // ← 구조 재사용
-  const role = useAuthStore((s) => s.role);
+  const login = useAuthStore((s) => s.login);
+  const navigate = useNavigate();
 
-  // ===============================
-  // WebSocket CONNECT
-  // ===============================
-  useEffect(() => {
-    console.log("[Waiting] WS connect start");
-
-    wsClient.connect(
-      () => {
-        console.log("[Waiting] WS connected");
-
-        notifications.show({
-          title: "연결 완료",
-          message: "상담 서버에 연결되었습니다",
-        });
-
-        // 🔥 나중에 매칭 알림용
-        wsClient.subscribe("/sub/waiting", (msg) => {
-          console.log("[Waiting][WS]", msg);
-        });
-      },
-      (err) => {
-        console.error("[Waiting] WS error", err);
-      }
-    );
-
-    return () => {
-      wsClient.disconnect();
-      console.log("[Waiting] WS disconnected");
-    };
-  }, []);
-
-  // ===============================
-  // 상담 요청
-  // ===============================
-  const requestMatch = async () => {
+  const handleLogin = async () => {
     try {
-      await api.post("/match/request", {
-        domainId: 1,
-        categoryId: 1,
+      const res = await api.post("/auth/user/login", {
+        email,
+        password: pwd,
       });
 
+      /**
+       * ✅ USER 로그인
+       * - userId
+       * - accessToken
+       * - role = USER
+       */
+      login(res.data.id, res.data.accessToken, "USER");
+
       notifications.show({
-        title: "상담 요청 완료",
-        message: "상담 대기열에 등록되었습니다",
+        title: "로그인 성공",
+        message: "세션 상태를 확인합니다.",
       });
-    } catch (e) {
+
+      // ✅ 핵심 수정
+      // 로그인 후 항상 루트로 이동
+      navigate("/", { replace: true });
+    } catch (err) {
+      console.error("Login Error:", err);
+
       notifications.show({
-        title: "요청 실패",
+        title: "로그인 실패",
         color: "red",
-        message: "상담 요청 중 오류가 발생했습니다",
+        message: "이메일 또는 비밀번호를 확인하세요",
       });
     }
   };
 
   return (
-    <div style={{ maxWidth: 480, margin: "60px auto" }}>
-      <Card shadow="sm" padding="lg">
-        <Title order={3}>상담 대기 중</Title>
+    <div style={{ width: 320, margin: "80px auto" }}>
+      <Card padding="lg" shadow="sm">
+        <Title order={3} mb="lg" style={{ textAlign: "center" }}>
+          고객 로그인
+        </Title>
 
-        <Text mt="md">
-          로그인 ID: <b>{userId}</b>
-        </Text>
+        <TextInput
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          mb="md"
+        />
 
-        <Text size="sm" c="dimmed" mt="xs">
-          role: {role}
-        </Text>
+        <TextInput
+          label="Password"
+          value={pwd}
+          type="password"
+          onChange={(e) => setPwd(e.target.value)}
+          mb="lg"
+        />
 
-        <Text mt="sm" c="dimmed">
-          상담사와 연결될 때까지 잠시 기다려주세요.
-        </Text>
-
-        <Button mt="lg" fullWidth onClick={requestMatch}>
-          상담 요청
+        <Button fullWidth onClick={handleLogin}>
+          로그인
         </Button>
       </Card>
     </div>
