@@ -26,6 +26,7 @@ export interface SessionInfo {
   feedback: string | null;
 }
 export interface ChatMessage {
+
   messageId: number;
   senderType: "USER" | "COUNSELOR";
   senderId: number;

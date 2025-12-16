@@ -10,9 +10,10 @@ type Props = {
 
 export function WSProvider({ children }: Props) {
   const clientRef = useRef<WSClient | null>(null);
-  const connectingRef = useRef(false); // 🔒 StrictMode 보호
+  const connectingRef = useRef(false);
+  const subscriptionsRef = useRef<Map<string, () => void>>(new Map()); // 🔥 핵심
   const [connected, setConnected] = useState(false);
-console.log("[WSProvider] render");
+
   const accessToken = useAuthStore((s) => s.accessToken);
 
   // ===============================
@@ -20,8 +21,8 @@ console.log("[WSProvider] render");
   // ===============================
   useEffect(() => {
     if (!accessToken) return;
-    if (connectingRef.current) return; // 🔥 중복 연결 방지
-     console.log("[WSProvider] accessToken =", accessToken);
+    if (connectingRef.current) return;
+
     connectingRef.current = true;
 
     const client = new WSClient();
@@ -29,58 +30,67 @@ console.log("[WSProvider] render");
 
     client.connect(
       () => {
-        console.log("[WSProvider] connected");
         setConnected(true);
+        console.log("[WS] CONNECTED");
       },
       (err) => {
-        console.error("[WSProvider] connection error", err);
+        console.error("[WS] CONNECT ERROR", err);
         setConnected(false);
       }
     );
 
     return () => {
-      connectingRef.current = false;
+      // 🔥 모든 구독 해제
+      subscriptionsRef.current.forEach((unsub) => unsub());
+      subscriptionsRef.current.clear();
+
       client.disconnect();
       clientRef.current = null;
+      connectingRef.current = false;
       setConnected(false);
-      console.log("[WSProvider] disconnected");
+
+      console.log("[WS] DISCONNECTED");
     };
   }, [accessToken]);
 
   // ===============================
-  // 2. subscribe wrapper
+  // 2. subscribe (중복 차단 핵심)
   // ===============================
-  const subscribe = (
-    destination: string,
-    callback: (message: any) => void
-  ) => {
+  const subscribe = (destination: string, callback: (message: any) => void) => {
     if (!clientRef.current || !connected) {
-      console.warn("[WSProvider] subscribe ignored (not connected)");
+      console.warn("[WS] subscribe ignored (not connected)");
       return () => {};
     }
 
-    return clientRef.current.subscribe(destination, callback) ?? (() => {});
+    // 🔥 이미 구독 중이면 재사용
+    if (subscriptionsRef.current.has(destination)) {
+      console.warn("[WS] already subscribed:", destination);
+      return subscriptionsRef.current.get(destination)!;
+    }
+
+    const unsubscribe =
+      clientRef.current.subscribe(destination, callback) ?? (() => {});
+
+    subscriptionsRef.current.set(destination, unsubscribe);
+    console.log("[WS] SUBSCRIBED:", destination);
+
+    return () => {
+      unsubscribe();
+      subscriptionsRef.current.delete(destination);
+      console.log("[WS] UNSUBSCRIBED:", destination);
+    };
   };
 
   // ===============================
-  // 3. send wrapper
+  // 3. send
   // ===============================
   const send = (destination: string, payload: any) => {
-    if (!clientRef.current || !connected) {
-      console.warn("[WSProvider] send ignored (not connected)");
-      return;
-    }
+    if (!clientRef.current || !connected) return;
     clientRef.current.send(destination, payload);
   };
 
   return (
-    <WSContext.Provider
-      value={{
-        connected,
-        subscribe,
-        send,
-      }}
-    >
+    <WSContext.Provider value={{ connected, subscribe, send }}>
       {children}
     </WSContext.Provider>
   );

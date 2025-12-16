@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
  * - Redis 채널(ws:session:*)에서 메시지를 받으면
  * - /sub/session/{sessionId} 로 STOMP 브로드캐스트
  */
-@Component
+
 @RequiredArgsConstructor
 @Slf4j
 public class RedisSubscriber implements MessageListener {

@@ -11,7 +11,7 @@ import { Notifications } from "@mantine/notifications";
 import { WSProvider } from "./api/providers/WSProvider";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <BrowserRouter>
       <MantineProvider>
         <Notifications />
@@ -23,5 +23,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 
       </MantineProvider>
     </BrowserRouter>
-  </React.StrictMode>
+  /* </React.StrictMode> */
 );

@@ -25,9 +25,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // =====================================
-  // 1️⃣ sessionId 변경 시 상태 초기화
-  // =====================================
+  // 1️⃣ sessionId 변경 시 초기화
   useEffect(() => {
     setSession(null);
     setMessages([]);
@@ -35,9 +33,7 @@ export default function ChatPage() {
     setError(null);
   }, [sid]);
 
-  // =====================================
-  // 2️⃣ 초기 세션 + 메시지 로드
-  // =====================================
+  // 2️⃣ 초기 세션 + 메시지 로드 (REST)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -50,7 +46,7 @@ export default function ChatPage() {
           withCredentials: true,
         });
         setMessages(msgRes.data);
-      } catch (e) {
+      } catch {
         setError("세션 정보를 불러오지 못했습니다.");
       } finally {
         setLoading(false);
@@ -62,9 +58,7 @@ export default function ChatPage() {
     }
   }, [sid]);
 
-  // =====================================
-  // 3️⃣ WebSocket 실시간 메시지 구독
-  // =====================================
+  // 3️⃣ WebSocket 구독 (🔥 메시지 갱신의 유일한 통로)
   useEffect(() => {
     if (!connected || !client || !session) return;
 
@@ -74,7 +68,20 @@ export default function ChatPage() {
     const subscription = client.subscribe(topic, (msg) => {
       try {
         const data: ChatMessage = JSON.parse(msg.body);
-        setMessages((prev) => [...prev, data]);
+
+        setMessages((prev) => {
+          // ✅ senderId + timestamp 기준 중복 차단
+          if (
+            prev.some(
+              (m) =>
+                m.senderId === data.senderId &&
+                m.timestamp === data.timestamp
+            )
+          ) {
+            return prev;
+          }
+          return [...prev, data];
+        });
       } catch (e) {
         console.error("[WS] message parse error", e);
       }
@@ -86,9 +93,7 @@ export default function ChatPage() {
     };
   }, [connected, client, session, sid]);
 
-  // =====================================
-  // 4️⃣ 로딩 / 에러 처리
-  // =====================================
+  // 4️⃣ 로딩 / 에러
   if (loading) {
     return (
       <Center mt="xl">
@@ -105,9 +110,7 @@ export default function ChatPage() {
     );
   }
 
-  // =====================================
   // 5️⃣ UI
-  // =====================================
   return (
     <>
       <Title order={2} mb="md">
@@ -123,7 +126,7 @@ export default function ChatPage() {
           <Card withBorder shadow="sm" p="md">
             <ChatHeader session={session} />
             <ChatWindow messages={messages} />
-            <ChatInput sessionId={sid} onNewMessage={setMessages} />
+            <ChatInput sessionId={sid} />
           </Card>
         </Grid.Col>
 

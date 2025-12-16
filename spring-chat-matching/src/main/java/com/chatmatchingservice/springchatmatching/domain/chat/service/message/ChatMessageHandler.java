@@ -15,6 +15,7 @@ public class ChatMessageHandler implements MessageHandler {
     @Override
     public void handle(WSMessage message) {
         log.info("[WS][Handler] MESSAGE 처리: {}", message);
+        log.warn("🚨🚨🚨 ChatMessageHandler.handle() 호출됨 🚨🚨🚨");
         messageService.handleMessage(message);
     }
 

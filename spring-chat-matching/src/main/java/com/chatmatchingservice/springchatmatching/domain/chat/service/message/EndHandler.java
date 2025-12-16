@@ -2,8 +2,9 @@ package com.chatmatchingservice.springchatmatching.domain.chat.service.message;
 
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisPublisher;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class EndHandler implements MessageHandler {
 
-    private final RedisPublisher redisPublisher;
+    private final RedisRepository redisRepository;
 
     @Override
     public boolean supports(String type) {
@@ -42,7 +43,7 @@ public class EndHandler implements MessageHandler {
             log.info("[Handler][END] 상담 종료 처리: {}", message);
 
             String channel = "ws:session:" + message.getSessionId();
-            redisPublisher.publish(channel, message);
+            redisRepository.publish(channel, message);
 
         } catch (CustomException e) {
             // 이미 정의된 CustomException이면 그대로 던짐

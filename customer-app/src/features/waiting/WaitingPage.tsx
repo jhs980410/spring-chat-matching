@@ -107,36 +107,39 @@ export default function WaitingPage() {
   // ===============================
   // 2. WebSocket 구독 (WAITING → 매칭)
   // ===============================
-  useEffect(() => {
-    if (!connected) return;
+useEffect(() => {
+  if (!connected) return;
 
-    // 연결 알림은 1회만
-    if (!wsNotifiedRef.current) {
-      wsNotifiedRef.current = true;
+  // 연결 알림은 1회만
+  if (!wsNotifiedRef.current) {
+    wsNotifiedRef.current = true;
+    notifications.show({
+      title: "연결 완료",
+      message: "상담 서버에 연결되었습니다.",
+    });
+  }
+
+  const unsubscribe = subscribe(
+    "/sub/waiting",
+    (payload: { sessionId?: number }) => {
+      if (!payload?.sessionId) return;
+
       notifications.show({
-        title: "연결 완료",
-        message: "상담 서버에 연결되었습니다.",
+        title: "상담 연결",
+        message: "상담사와 연결되었습니다.",
       });
+
+      // 🔥 핵심: 페이지 이동 전에 반드시 구독 해제
+      unsubscribe();
+
+      navigate(`/chat/${payload.sessionId}`);
     }
+  );
 
-      const unsubscribe = subscribe(
-        "/sub/waiting",
-        (payload: { sessionId?: number }) => {
-          if (!payload?.sessionId) return;
-
-          notifications.show({
-            title: "상담 연결",
-            message: "상담사와 연결되었습니다.",
-          });
-
-          navigate(`/chat/${payload.sessionId}`);
-        }
-      );
-
-    return () => {
-      unsubscribe?.();
-    };
-  }, [connected, subscribe, navigate]);
+  return () => {
+    unsubscribe();
+  };
+}, [connected, subscribe, navigate]);
 
   // ===============================
   // UI

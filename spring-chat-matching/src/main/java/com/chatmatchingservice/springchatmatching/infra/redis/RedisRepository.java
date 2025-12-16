@@ -68,6 +68,8 @@ public interface RedisRepository {
     // ================================
     String wsChannel(Long sessionId);
     void publishToWsChannel(Long sessionId, Object message);
+
+    void publish(String channel, Object message);
     // 🔥 유저 disconnect 시간 기록
     void setUserDisconnectTime(Long userId, long timestamp);
     Long getUserDisconnectTime(Long userId);

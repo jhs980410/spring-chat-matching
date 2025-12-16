@@ -29,15 +29,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
 
-        // 🔥 반드시 필요 — /sub 브로커 활성화
-        registry.enableSimpleBroker("/sub");
+        // 🔥 [수정!] Simple Broker 제거:
+        // Simple Broker는 Redis Pub/Sub과 기능이 중복되어 중복 메시지 전송을 유발합니다.
+        // registry.enableSimpleBroker("/sub"); // <-- 이 라인을 제거합니다.
 
-        // 🔥 클라이언트 메시지 → @MessageMapping("/session/...") 으로 전달
+        // 📌 [추가] 외부 브로커 사용을 명시하거나, 아무것도 설정하지 않아 Simple Broker를 비활성화합니다.
+        // 대신, RedisSubscriber가 SimpMessagingTemplate을 통해 직접 메시지를 /sub으로 발행합니다.
+
+        // 클라이언트 메시지 → @MessageMapping("/session/...") 으로 전달
         registry.setApplicationDestinationPrefixes("/pub");
 
-        log.info("📡 STOMP Broker 설정 완료: enableSimpleBroker=/sub, prefix=/pub");
+        log.info("📡 STOMP Broker 설정 완료: prefix=/pub (Simple Broker 비활성화됨)");
     }
-
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
 

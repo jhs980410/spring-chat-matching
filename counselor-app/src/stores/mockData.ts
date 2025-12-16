@@ -150,6 +150,7 @@ export const mockSessions: SessionSummary[] = [
 // 🔹 상담 메시지 (chat_message)
 // ----------------------------------------------------------------------
 export type ChatMessage = {
+  id: number;   
   sessionId: number;     // chat_message.session_id
   sender: "USER" | "COUNSELOR"; // chat_message.sender_type
   senderId: number;      // chat_message.sender_id
@@ -157,22 +158,7 @@ export type ChatMessage = {
   createdAt: string;     // chat_message.created_at
 };
 
-export const mockMessages: ChatMessage[] = [
-  {
-    sessionId: 1,
-    sender: "USER",
-    senderId: 1001,
-    message: "상품 배송이 언제 되나요?",
-    createdAt: "2025-12-01 10:01",
-  },
-  {
-    sessionId: 1,
-    sender: "COUNSELOR",
-    senderId: 2001,
-    message: "확인해보겠습니다!",
-    createdAt: "2025-12-01 10:02",
-  },
-];
+
 
 // ----------------------------------------------------------------------
 // 🔹 상담사 KPI (counselor_stats 테이블)

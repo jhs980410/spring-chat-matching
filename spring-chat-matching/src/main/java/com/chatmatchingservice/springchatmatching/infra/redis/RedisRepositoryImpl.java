@@ -323,12 +323,20 @@ public class RedisRepositoryImpl implements RedisRepository {
     // WebSocket Pub/Sub
     // ==========================================
 
+    // RedisRepositoryImpl.java
     @Override
     public void publishToWsChannel(Long sessionId, Object message) {
+        // 🔥 RedisPublisher 대신 RedisTemplate을 직접 사용하여 단일 발행을 보장
+        // (이 로직이 RedisTemplate.convertAndSend()를 단 한 번만 호출하도록 보장해야 함)
         redisTemplate.convertAndSend(
                 RedisKeyManager.wsChannel(sessionId),
                 message
         );
+    }
+
+    @Override
+    public void publish(String channel, Object message) {
+        redisTemplate.convertAndSend(channel, message);
     }
 
     @Override

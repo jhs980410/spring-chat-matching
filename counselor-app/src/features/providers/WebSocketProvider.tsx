@@ -4,8 +4,8 @@ import { notifications } from "@mantine/notifications";
 import { useNavigate } from "react-router-dom";
 
 import SockJS from "sockjs-client";
-import Stomp, { Client } from "stompjs";
-
+import Stomp from "stompjs";
+import type { Client } from "stompjs";
 import { WSContext } from "./WSContext";
 
 export default function WebSocketProvider({
@@ -18,24 +18,25 @@ export default function WebSocketProvider({
   const navigate = useNavigate();
 
   const clientRef = useRef<Client | null>(null);
-  const [client, setClient] = useState<Client | null>(null);
+  const connectingRef = useRef(false);
+
+  // 🔥 stompjs에는 Subscription 타입이 없으므로 구조적으로 관리
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
-    if (!user?.id || !user?.token) {
-      console.log("[WS] user not ready");
-      return;
-    }
+    if (!user?.id || !user?.token) return;
+    if (connectingRef.current) return;
+
+    connectingRef.current = true;
 
     console.log("[WS] Connecting counselor:", user.id);
 
-    // 🔥 핵심 1: SockJS는 함수 호출 형태
     const socket = SockJS("http://localhost:8080/ws/connect");
-
-    // 🔥 핵심 2: Stomp.client ❌ → Stomp.over(socket) ⭕
     const stomp: Client = Stomp.over(socket);
 
-    // (선택) 콘솔 로그 줄이기
+    // 로그 과다 방지
     stomp.debug = () => {};
 
     clientRef.current = stomp;
@@ -44,12 +45,17 @@ export default function WebSocketProvider({
       { Authorization: `Bearer ${user.token}` },
       () => {
         console.log("[WS] CONNECTED (COUNSELOR)");
-        setClient(stomp);
         setConnected(true);
 
-        // 🔔 상담사 전용 알림 구독
+        // 🔒 이미 구독 중이면 재구독 금지
+        if (subscriptionRef.current) {
+          console.warn("[WS] counselor topic already subscribed");
+          return;
+        }
+
         const topic = `/sub/counselor/${user.id}`;
-        stomp.subscribe(topic, (msg) => {
+
+        subscriptionRef.current = stomp.subscribe(topic, (msg) => {
           const data = JSON.parse(msg.body);
 
           if (data.type === "MATCH_ASSIGNED") {
@@ -61,35 +67,46 @@ export default function WebSocketProvider({
             navigate(`/chat/${data.sessionId}`);
           }
         });
+
+        console.log("[WS] SUBSCRIBED:", topic);
       },
       (err) => {
         console.error("[WS] CONNECTION ERROR:", err);
         setConnected(false);
-        setClient(null);
+        connectingRef.current = false;
       }
     );
 
     return () => {
       console.log("[WS] Disconnecting counselor WS...");
+
+      // 🔥 구독 해제
+      if (subscriptionRef.current) {
+        try {
+          subscriptionRef.current.unsubscribe();
+        } catch {}
+        subscriptionRef.current = null;
+      }
+
+      // 🔥 연결 해제
       if (clientRef.current) {
         try {
           clientRef.current.disconnect(() => {
             console.log(">>> DISCONNECT");
           });
-        } catch (e) {
-          console.warn("[WS] disconnect skipped (not connected)");
-        }
+        } catch {}
         clientRef.current = null;
       }
-      setClient(null);
+
       setConnected(false);
+      connectingRef.current = false;
     };
   }, [user?.id, user?.token, navigate]);
 
   return (
     <WSContext.Provider
       value={{
-        client,
+        client: clientRef.current,
         connected,
       }}
     >

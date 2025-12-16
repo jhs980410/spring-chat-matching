@@ -1,7 +1,7 @@
 // features/chat/ChatPage.tsx
 import { useParams } from "react-router-dom";
 import { Card, Stack, Title } from "@mantine/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { notifications } from "@mantine/notifications";
 
 import ChatInput from "./ChatInput";
@@ -23,11 +23,11 @@ export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const { send, subscribe, connected } = useWS();
   const myId = useAuthStore((s) => s.userId);
-  const role = useAuthStore((s) => s.role);
 
   const [messages, setMessages] = useState<WSMessage[]>([]);
+  const subscribedRef = useRef(false);
 
-  // 1️⃣ 기존 메시지 로드
+  // 1️⃣ 기존 메시지 로드 (REST)
   useEffect(() => {
     if (!sessionId) return;
 
@@ -36,25 +36,41 @@ export default function ChatPage() {
     });
   }, [sessionId]);
 
-  // 2️⃣ WS 구독
+  // 2️⃣ WS 구독 (🔥 유일한 실시간 통로)
   useEffect(() => {
     if (!connected || !sessionId) return;
+    if (subscribedRef.current) return;
+
+    subscribedRef.current = true;
 
     const unsubscribe = subscribe(
       `/sub/session/${sessionId}`,
       (payload: WSMessage) => {
-        setMessages((prev) => [...prev, payload]);
+        setMessages((prev) => {
+          // ✅ senderId + timestamp 기준 중복 차단
+          if (
+            prev.some(
+              (m) =>
+                m.senderId === payload.senderId &&
+                m.timestamp === payload.timestamp
+            )
+          ) {
+            return prev;
+          }
+          return [...prev, payload];
+        });
       }
     );
 
-    return () => unsubscribe?.();
+    return () => {
+      subscribedRef.current = false;
+      unsubscribe?.();
+    };
   }, [connected, sessionId, subscribe]);
 
-  // 3️⃣ 메시지 전송
+  // 3️⃣ 메시지 전송 (❌ 낙관적 추가 없음)
   const handleSend = (text: string) => {
-    if (!sessionId) return;
-
-    if (!connected) {
+    if (!sessionId || !connected) {
       notifications.show({
         title: "연결 중",
         message: "서버와 연결 중입니다.",
@@ -63,32 +79,18 @@ export default function ChatPage() {
       return;
     }
 
-    const timestamp = Date.now();
-
     send(`/pub/session/${sessionId}`, {
       type: "MESSAGE",
       sessionId,
       message: text,
-      timestamp,
+      timestamp: Date.now(),
     });
-
-    // optimistic update
-    setMessages((prev) => [
-      ...prev,
-      {
-        sessionId,
-        role: role ?? "USER",
-        senderId: myId!,
-        message: text,
-        timestamp,
-      },
-    ]);
   };
 
-  // 🔥 WSMessage → ChatMessage 변환
+  // 4️⃣ UI 메시지 변환
   const uiMessages: ChatMessage[] = messages.map((m, idx) => ({
-    messageId: m.timestamp ?? idx,
-    senderType: m.role,
+    messageId: `${m.senderId}-${m.timestamp}-${idx}`, // UI용 키
+    senderType: m.senderId === myId ? "USER" : "COUNSELOR",
     senderId: m.senderId,
     message: m.message,
     timestamp: m.timestamp,
@@ -99,9 +101,7 @@ export default function ChatPage() {
       <Card shadow="sm" padding="lg">
         <Stack>
           <Title order={3}>상담 채팅</Title>
-
           <ChatWindow messages={uiMessages} />
-
           <ChatInput onSend={handleSend} disabled={!connected} />
         </Stack>
       </Card>

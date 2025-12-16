@@ -2,58 +2,40 @@
 import { useState } from "react";
 import { TextInput, Button, Group } from "@mantine/core";
 import { useWS } from "../../providers/useWS";
-import { useAuthStore } from "../../../stores/authStore";
-import type { ChatMessage } from "./ChatWindow";
 
-interface Props {
+type Props = {
   sessionId: number;
-  onNewMessage: (updater: (prev: ChatMessage[]) => ChatMessage[]) => void;
-}
+};
 
-export default function ChatInput({ sessionId, onNewMessage }: Props) {
+export default function ChatInput({ sessionId }: Props) {
   const { client, connected } = useWS();
-  const counselorId = useAuthStore((s) => s.counselorId);
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false); // 🔒 중복 SEND 방지
 
   const sendMessage = () => {
     if (!text.trim()) return;
-    if (!connected || !client) {
-      console.warn("[WS] not connected, message blocked");
-      return;
-    }
+    if (!connected || !client || sending) return;
 
-    // 🔹 서버로 전송할 payload
-    const payload = {
-      type: "MESSAGE",
-      sessionId,
-      message: text,
-      timestamp: Date.now(),
-    };
+    setSending(true);
 
     try {
       client.send(
         `/pub/session/${sessionId}`,
         {},
-        JSON.stringify(payload)
+        JSON.stringify({
+          type: "MESSAGE",
+          sessionId,
+          message: text,
+          // ❌ timestamp 제거 → 서버에서 생성
+        })
       );
+
+      setText(""); // 입력창만 초기화
     } catch (e) {
       console.error("[WS] send error", e);
-      return;
+    } finally {
+      setSending(false);
     }
-
-    // 🔹 optimistic UI 업데이트
-    onNewMessage((prev) => [
-      ...prev,
-      {
-        messageId: Date.now(), // 임시 ID
-        senderType: "COUNSELOR",
-        senderId: counselorId ?? 0,
-        message: text,
-        timestamp: payload.timestamp,
-      },
-    ]);
-
-    setText("");
   };
 
   return (
@@ -61,9 +43,7 @@ export default function ChatInput({ sessionId, onNewMessage }: Props) {
       <TextInput
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder={
-          connected ? "메시지를 입력하세요" : "연결 중입니다..."
-        }
+        placeholder={connected ? "메시지를 입력하세요" : "연결 중입니다..."}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -71,10 +51,13 @@ export default function ChatInput({ sessionId, onNewMessage }: Props) {
           }
         }}
         style={{ flex: 1 }}
-        disabled={!connected}
+        disabled={!connected || sending}
       />
 
-      <Button onClick={sendMessage} disabled={!connected || !text.trim()}>
+      <Button
+        onClick={sendMessage}
+        disabled={!connected || !text.trim() || sending}
+      >
         전송
       </Button>
     </Group>

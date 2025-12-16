@@ -2,8 +2,9 @@ package com.chatmatchingservice.springchatmatching.domain.chat.service.message;
 
 import com.chatmatchingservice.springchatmatching.global.error.CustomException;
 import com.chatmatchingservice.springchatmatching.global.error.ErrorCode;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
-import com.chatmatchingservice.springchatmatching.infra.redis.RedisPublisher;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SystemHandler implements MessageHandler {
 
-    private final RedisPublisher redisPublisher;
+    private final RedisRepository redisRepository;
 
     @Override
     public boolean supports(String type) {
@@ -39,7 +40,7 @@ public class SystemHandler implements MessageHandler {
             // -------------------------
             // 2) Redis 발행
             // -------------------------
-            redisPublisher.publish(channel, message);
+            redisRepository.publish(channel, message);
 
             log.info("[Handler][SYSTEM] 시스템 메시지 처리 완료: sessionId={}, msg={}",
                     message.getSessionId(), message.getMessage());
