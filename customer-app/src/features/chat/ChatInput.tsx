@@ -1,13 +1,13 @@
 // features/chat/ChatInput.tsx
-
 import { useState } from "react";
-import { Group, TextInput, Button } from "@mantine/core";
+import { TextInput, Button, Group } from "@mantine/core";
 
 type Props = {
-  onSend: (message: string) => void;
+  onSend: (text: string) => void;
+  disabled?: boolean;
 };
 
-export default function ChatInput({ onSend }: Props) {
+export default function ChatInput({ onSend, disabled }: Props) {
   const [text, setText] = useState("");
 
   const handleSend = () => {
@@ -17,19 +17,24 @@ export default function ChatInput({ onSend }: Props) {
   };
 
   return (
-    <Group gap="sm">
+    <Group mt="md">
       <TextInput
-        placeholder="메시지를 입력하세요"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        style={{ flex: 1 }}
+        placeholder={disabled ? "연결 중입니다..." : "메시지를 입력하세요"}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
+            e.preventDefault();
             handleSend();
           }
         }}
+        style={{ flex: 1 }}
+        disabled={disabled}
       />
-      <Button onClick={handleSend}>전송</Button>
+
+      <Button onClick={handleSend} disabled={disabled || !text.trim()}>
+        전송
+      </Button>
     </Group>
   );
 }

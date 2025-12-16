@@ -1,12 +1,12 @@
 // features/chat/ChatPage.tsx
-
 import { useParams } from "react-router-dom";
 import { Card, Stack, Title } from "@mantine/core";
 import { useEffect, useState } from "react";
 import { notifications } from "@mantine/notifications";
 
 import ChatInput from "./ChatInput";
-import ChatMessageList from "./ChatMessageList";
+import ChatWindow from "./ChatWindow";
+import type { ChatMessage } from "./ChatWindow";
 import { useWS } from "../../api/providers/useWS";
 import { useAuthStore } from "../../stores/authStore";
 import api from "../../api/axios";
@@ -27,9 +27,7 @@ export default function ChatPage() {
 
   const [messages, setMessages] = useState<WSMessage[]>([]);
 
-  // ===============================
-  // 1. 기존 메시지 로드
-  // ===============================
+  // 1️⃣ 기존 메시지 로드
   useEffect(() => {
     if (!sessionId) return;
 
@@ -38,9 +36,7 @@ export default function ChatPage() {
     });
   }, [sessionId]);
 
-  // ===============================
-  // 2. WS 구독
-  // ===============================
+  // 2️⃣ WS 구독
   useEffect(() => {
     if (!connected || !sessionId) return;
 
@@ -51,43 +47,52 @@ export default function ChatPage() {
       }
     );
 
-    return () => {
-      unsubscribe?.();
-    };
+    return () => unsubscribe?.();
   }, [connected, sessionId, subscribe]);
 
-  // ===============================
-  // 3. 메시지 전송 (🔥 핵심 수정)
-  // ===============================
+  // 3️⃣ 메시지 전송
   const handleSend = (text: string) => {
     if (!sessionId) return;
 
     if (!connected) {
       notifications.show({
         title: "연결 중",
-        message: "서버와 연결 중입니다. 잠시만 기다려주세요.",
+        message: "서버와 연결 중입니다.",
         color: "yellow",
       });
       return;
     }
 
+    const timestamp = Date.now();
+
     send(`/pub/session/${sessionId}`, {
-      sessionId: String(sessionId),
+      type: "MESSAGE",
+      sessionId,
       message: text,
+      timestamp,
     });
 
-    // 낙관적 업데이트
+    // optimistic update
     setMessages((prev) => [
       ...prev,
       {
-        sessionId: String(sessionId),
-        role: role === "USER" ? "USER" : "COUNSELOR",
+        sessionId,
+        role: role ?? "USER",
         senderId: myId!,
         message: text,
-        timestamp: Date.now(),
+        timestamp,
       },
     ]);
   };
+
+  // 🔥 WSMessage → ChatMessage 변환
+  const uiMessages: ChatMessage[] = messages.map((m, idx) => ({
+    messageId: m.timestamp ?? idx,
+    senderType: m.role,
+    senderId: m.senderId,
+    message: m.message,
+    timestamp: m.timestamp,
+  }));
 
   return (
     <div style={{ maxWidth: 600, margin: "40px auto" }}>
@@ -95,9 +100,9 @@ export default function ChatPage() {
         <Stack>
           <Title order={3}>상담 채팅</Title>
 
-          <ChatMessageList messages={messages} myId={myId!} />
+          <ChatWindow messages={uiMessages} />
 
-          <ChatInput onSend={handleSend} />
+          <ChatInput onSend={handleSend} disabled={!connected} />
         </Stack>
       </Card>
     </div>
