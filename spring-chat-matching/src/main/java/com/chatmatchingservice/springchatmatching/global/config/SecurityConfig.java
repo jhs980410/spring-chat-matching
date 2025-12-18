@@ -16,6 +16,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -104,8 +106,7 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
 
         // 개발 환경 전체 허용
-        config.addAllowedOriginPattern("*");
-
+        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

@@ -48,6 +48,13 @@ public class AuthController {
         return ResponseEntity.ok(res);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> getCurrentUser(HttpServletRequest request) {
+        // 1. 요청의 쿠키나 헤더에 있는 토큰을 파싱해서 유저 정보를 가져옴
+        // 2. AuthService에서 해당 토큰이 유효한지 확인하고 유저 정보를 담은 AuthResponse 반환
+        AuthResponse res = authService.getCurrentUserInfo(request);
+        return ResponseEntity.ok(res);
+    }
 
     // ==============================
     // COUNSELOR SIGNUP

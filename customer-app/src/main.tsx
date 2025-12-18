@@ -7,21 +7,17 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import { MantineProvider } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
-
-import { WSProvider } from "./api/providers/WSProvider";
-
+import "@mantine/carousel/styles.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   // <React.StrictMode>
-    <BrowserRouter>
-      <MantineProvider>
-        <Notifications />
-
-        {/* 🔥 WebSocket Provider는 App을 감싸야 한다 */}
-        <WSProvider>
-          <App />
-        </WSProvider>
-
-      </MantineProvider>
-    </BrowserRouter>
-  /* </React.StrictMode> */
+  <BrowserRouter>
+    <MantineProvider theme={{
+    fontFamily:
+      "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  }}>
+      <Notifications />
+      <App />
+    </MantineProvider>
+  </BrowserRouter>
+  // </React.StrictMode>
 );

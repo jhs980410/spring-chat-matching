@@ -112,5 +112,28 @@ public class AuthService {
 
         return new AuthResponse(newAccess, refreshToken, userId, role);
     }
+    // ============================================
+// GET CURRENT USER INFO (새로고침 시 정보 복구용)
+// ============================================
+    public AuthResponse getCurrentUserInfo(HttpServletRequest request) {
+        // 1. 쿠키에서 Access Token 추출
+        String accessToken = cookieUtil.getAccessToken(request);
 
+        // 2. 토큰 유효성 검사
+        if (accessToken == null || !jwtTokenProvider.validateToken(accessToken)) {
+            // 토큰이 없거나 만료되었다면 리프레시 토큰 시도 혹은 에러 처리
+            // 여기서는 유효하지 않으면 예외를 던져 프론트에서 로그아웃 처리하게 함
+            throw new CustomException(ErrorCode.LOGIN_FAILED);
+        }
+
+        // 3. 토큰에서 유저 정보 추출 (ID, Role)
+        Long id = jwtTokenProvider.getUserId(accessToken);
+        String role = jwtTokenProvider.getRole(accessToken);
+
+        // Refresh Token은 굳이 새로 발급하지 않고 기존 것을 유지하거나
+        // 로직에 따라 다시 가져올 수 있습니다.
+        String refreshToken = cookieUtil.getRefreshToken(request);
+
+        return new AuthResponse(accessToken, refreshToken, id, role);
+    }
 }

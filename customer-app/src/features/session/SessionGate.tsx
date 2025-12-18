@@ -1,6 +1,6 @@
 // features/session/SessionGate.tsx
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 
 import { useAuthStore } from "../../stores/authStore";
@@ -19,8 +19,13 @@ export default function SessionGate() {
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
 
+  const [checked, setChecked] = useState(false);
+
   useEffect(() => {
-    if (!userId || role !== "USER") return;
+    if (!userId || role !== "USER") {
+      setChecked(true);
+      return;
+    }
 
     const routeBySession = async () => {
       try {
@@ -30,23 +35,23 @@ export default function SessionGate() {
         } | null>("/sessions/me");
 
         if (!res.data) {
-          navigate("/request", { replace: true });
+          navigate("/support/request", { replace: true });
           return;
         }
 
         const { sessionId, status } = res.data;
 
         if (status === "WAITING") {
-          navigate("/waiting", { replace: true });
+          navigate("/support/waiting", { replace: true });
           return;
         }
 
         if (status === "IN_PROGRESS" || status === "AFTER_CALL") {
-          navigate(`/chat/${sessionId}`, { replace: true });
+          navigate(`/support/chat/${sessionId}`, { replace: true });
           return;
         }
 
-        navigate("/request", { replace: true });
+        navigate("/support/request", { replace: true });
       } catch {
         notifications.show({
           title: "세션 확인 실패",
@@ -55,11 +60,15 @@ export default function SessionGate() {
         });
         logout();
         navigate("/login", { replace: true });
+      } finally {
+        setChecked(true);
       }
     };
 
     routeBySession();
   }, [userId, role, navigate, logout]);
 
-  return null; // 라우팅만 수행
+  if (!checked) return null; // 로딩 스핀 넣어도 됨
+
+  return <Outlet />;
 }
