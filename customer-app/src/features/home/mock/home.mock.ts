@@ -8,15 +8,16 @@ export type Category =
   | "THEATER";
 
 export interface EventSummary {
-  id: number;
+  id: number;              // UI용
+  eventId?: number;        //  DB event.id
   title: string;
-  category: Category;
+  category: Category;      // 홈 전시용
+  backendCategory?: string; // 예: CONCERT / MUSICAL
   thumbnail: string;
   badge?: "HOT" | "NEW" | "OPEN_SOON";
   openDate?: string;
   ranking?: number;
 }
-
 export const homeMock = {
   heroBanners: [
   {
@@ -40,55 +41,65 @@ export const homeMock = {
 ],
 
   featuredEvents: [
-    {
-      id: 101,
-      title: "〈센과 치히로의 행방불명〉오리지널 투어 (SPIRITED AWAY)",
-      category: "MUSICAL",
-      thumbnail: "/images/1.png",
-      badge: "HOT",
-    },
-    {
-      id: 102,
-      title: "2025 김연우 크리스마스 콘서트 〈오마이갓연우〉",
-      category: "CONCERT",
-      thumbnail: "/images/kim.png",
-      badge: "NEW",
-    },
-    {
-      id: 103,
-      title: "연극 〈2호선세입자〉 : 지하철 생존 코미디",
-      category: "THEATER",
-      thumbnail: "/images/6.png",
-      badge: "OPEN_SOON",
-    },
-  ] as EventSummary[],
-
-  rankings: {
-    MUSICAL: [
-      { id: 201, title: "뮤지컬 데스노트", thumbnail: "/images/3.png", ranking: 1 },
-      { id: 202, title: "뮤지컬 레베카", thumbnail: "/images/2.png", ranking: 2 },
-      { id: 203, title: "뮤지컬 라이프오브파이", thumbnail: "/images/4.png", ranking: 3 },
-    ],
-    CONCERT: [],
-    SPORTS: [],
-    EXHIBITION: [],
-    THEATER: [],
+  {
+    id: 101,
+    eventId: 1, // ✅ DB event.id
+    title: "〈센과 치히로의 행방불명〉오리지널 투어 (SPIRITED AWAY)",
+    category: "MUSICAL",
+    backendCategory: "MUSICAL",
+    thumbnail: "/images/1.png",
+    badge: "HOT",
   },
+  {
+    id: 102,
+    eventId: 2,
+    title: "2025 김연우 크리스마스 콘서트 〈오마이갓연우〉",
+    category: "CONCERT",
+    backendCategory: "CONCERT",
+    thumbnail: "/images/kim.png",
+    badge: "NEW",
+  },
+  {
+    id: 103,
+    eventId: 3,
+    title: "연극 〈2호선세입자〉 : 지하철 생존 코미디",
+    category: "THEATER",
+    backendCategory: "THEATER",
+    thumbnail: "/images/6.png",
+    badge: "OPEN_SOON",
+  },
+] as EventSummary[],
+
+rankings: {
+  MUSICAL: [
+    { id: 201, eventId: 4, title: "뮤지컬 데스노트", thumbnail: "/images/3.png", ranking: 1 },
+    { id: 202, eventId: 5, title: "뮤지컬 레베카", thumbnail: "/images/2.png", ranking: 2 },
+    { id: 203, eventId: 6, title: "뮤지컬 라이프오브파이", thumbnail: "/images/4.png", ranking: 3 },
+  ],
+  CONCERT: [],
+  SPORTS: [],
+  EXHIBITION: [],
+  THEATER: [],
+},
 
   openSoonEvents: [
-    {
-      id: 301,
-      title: "임영웅 리사이클", 
-      category: "CONCERT",
-      openDate: "2025-12-24",
-      thumbnail: "/images/5.png",
-    },
-    {
-      id: 302,
-      title: "연극 〈살아있는 자를 수선하기〉",
-      category: "THEATER",
-      openDate: "2025-12-31",
-      thumbnail: "/images/7.png",
-    },
-  ] as EventSummary[],
+  {
+    id: 301,
+    eventId: 7,
+    title: "임영웅 리사이클",
+    category: "CONCERT",
+    backendCategory: "CONCERT",
+    openDate: "2025-12-24",
+    thumbnail: "/images/5.png",
+  },
+  {
+    id: 302,
+    eventId: 8,
+    title: "연극 〈살아있는 자를 수선하기〉",
+    category: "THEATER",
+    backendCategory: "THEATER",
+    openDate: "2025-12-31",
+    thumbnail: "/images/7.png",
+  },
+] as EventSummary[],
 };
