@@ -21,4 +21,5 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     // 오픈 예정
     List<Event> findTop5ByStartAtAfterOrderByStartAtAsc(LocalDateTime now);
+
 }

@@ -15,7 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
+import org.springframework.http.HttpMethod;
 import java.util.List;
 
 @Configuration
@@ -46,8 +46,13 @@ public class SecurityConfig {
                 // 3) 경로별 요청 허용
                 .authorizeHttpRequests(auth -> auth
                         // 인증(로그인) API
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // 로그인, 회원가입은 누구나 가능
+                        .requestMatchers("/api/auth/login", "/api/auth/signup", "/api/auth/refresh").permitAll()
 
+                        // 내 정보 조회(/api/auth/me)는 인증된 사용자만 가능하도록 제외하거나 상단에 명시
+                        .requestMatchers("/api/auth/me").authenticated()
+                        //이벤트 공개
+                        .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
                         // WebSocket 핸드셰이크 허용
                         .requestMatchers("/ws/**", "/ws/connect").permitAll()
 

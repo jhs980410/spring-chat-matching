@@ -2,7 +2,7 @@
 import { Container, Stack } from "@mantine/core";
 import { useState } from "react";
 
-import Header from "./components/Header";
+import Header from "../../layouts/Header";
 import HeroBanner from "./components/HeroBanner";
 import CategoryTabs from "./components/CategoryTabs";
 import FeaturedEventsSection from "./components/FeaturedEventsSection";

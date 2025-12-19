@@ -9,6 +9,7 @@ import {
 } from "@mantine/core";
 import type { EventSummary } from "../mock/home.mock";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom"; // 
 
 interface Props {
   event: EventSummary;
@@ -16,6 +17,7 @@ interface Props {
 
 export default function EventCard({ event }: Props) {
   const [hovered, setHovered] = useState(false);
+  const navigate = useNavigate(); // 
 
   return (
     <Card
@@ -32,8 +34,8 @@ export default function EventCard({ event }: Props) {
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => navigate(`/events/${event.id}`)} // ✅ 핵심
     >
-      {/* 썸네일 */}
       <Card.Section style={{ overflow: "hidden" }}>
         <Image
           src={event.thumbnail}
@@ -48,7 +50,6 @@ export default function EventCard({ event }: Props) {
       </Card.Section>
 
       <Stack mt="sm" gap={6}>
-        {/* 뱃지 영역 */}
         <Group justify="space-between">
           {event.badge && (
             <Badge
@@ -70,12 +71,10 @@ export default function EventCard({ event }: Props) {
           )}
         </Group>
 
-        {/* 제목 */}
         <Text fw={600} lineClamp={2} style={{ lineHeight: 1.4 }}>
           {event.title}
         </Text>
 
-        {/* 오픈 날짜 */}
         {event.openDate && (
           <Text size="sm" c="dimmed">
             {event.openDate} 오픈

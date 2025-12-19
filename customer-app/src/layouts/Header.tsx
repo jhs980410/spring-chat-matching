@@ -1,7 +1,7 @@
 import { Group, Button, Text } from "@mantine/core";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "../../../stores/authStore";
-import api from "../../../api/axios";
+import { useAuthStore } from "../stores/authStore";
+import api from "../api/axios";
 import { notifications } from "@mantine/notifications";
 
 export default function Header() {

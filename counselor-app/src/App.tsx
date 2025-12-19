@@ -21,25 +21,27 @@ export default function App() {
   const logout = useAuthStore((s) => s.logout);
   const [isInitialized, setIsInitialized] = useState(false); // 🔥 초기화 로딩 상태
 
-  useEffect(() => {
+useEffect(() => {
     const initAuth = async () => {
       try {
-        // 1. 서버의 /me 엔드포인트를 호출하여 쿠키 내 토큰 확인
+        // 1. 세션 복구 시도
         const res = await api.get("/auth/me");
         
-        // 2. 성공 시 Zustand 스토어 복구
-        // res.data는 { id, role, ... } 형태라고 가정
-        login(res.data.id, res.data.role); 
+        // 2. 스토어 복구 (백엔드 응답 필드명 확인 필요: res.data.accessToken 등)
+        login(res.data.id, res.data.accessToken, res.data.role); 
+        console.log("상담사 세션 복구 성공");
       } catch (err) {
-        console.log("세션이 없거나 만료되었습니다.");
-        logout(); // 실패 시 스토어 초기화
+        console.log("상담사 세션 없음 또는 만료");
+        logout(); 
       } finally {
-        setIsInitialized(true); // 3. 확인이 끝나면 화면을 보여줌
+        // 3. 확인 완료 후 렌더링 시작
+        setIsInitialized(true); 
       }
     };
 
     initAuth();
-  }, [login, logout]);
+    // 🔹 [login, logout]을 제거하여 무한 루프 원천 차단
+  }, []);
 
   // 인증 확인이 끝나기 전에는 아무것도 렌더링하지 않거나 로딩 스피너를 보여줌
   // 이렇게 해야 '깜빡임' 현상(잠깐 로그인 페이지 보였다가 메인 가는 현상)이 방지됩니다.
