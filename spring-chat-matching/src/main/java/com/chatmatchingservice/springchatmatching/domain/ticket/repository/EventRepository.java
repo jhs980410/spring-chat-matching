@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
-    // 메인 노출 (HOT / NEW)
+    // 메인 노출 (OPEN 중 최신)
     List<Event> findTop5ByStatusOrderByCreatedAtDesc(EventStatus status);
 
     // 랭킹 (카테고리별)
@@ -21,5 +21,4 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     // 오픈 예정
     List<Event> findTop5ByStartAtAfterOrderByStartAtAsc(LocalDateTime now);
-
 }

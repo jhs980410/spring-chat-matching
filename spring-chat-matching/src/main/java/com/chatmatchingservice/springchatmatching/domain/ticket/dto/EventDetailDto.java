@@ -17,13 +17,15 @@ public class EventDetailDto {
     private String title;
     private String description;
 
-    private String category;     // MUSICAL / CONCERT ...
-    private String thumbnail;    // 이미지 경로
+    private String categoryCode; // MUSICAL
+    private String categoryName; // 뮤지컬
+
+    private String thumbnail;
 
     private LocalDateTime startAt;
     private LocalDateTime endAt;
 
-    private String status;       // OPEN / SOLD_OUT / CLOSED
+    private String status;
 
     private List<TicketOptionDto> ticketOptions;
 
@@ -32,7 +34,8 @@ public class EventDetailDto {
                 .id(event.getId())
                 .title(event.getTitle())
                 .description(event.getDescription())
-                .category(event.getCategory().name())
+                .categoryCode(event.getCategory().getCode())
+                .categoryName(event.getCategory().getName())
                 .thumbnail(event.getThumbnail())
                 .startAt(event.getStartAt())
                 .endAt(event.getEndAt())

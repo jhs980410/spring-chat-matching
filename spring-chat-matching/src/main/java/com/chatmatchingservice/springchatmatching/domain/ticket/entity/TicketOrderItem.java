@@ -28,6 +28,8 @@ public class TicketOrderItem {
     @Column(nullable = false)
     private int price;
 
+    @Column(name = "unit_price", nullable = false)
+    private int unitPrice;
     void setOrder(TicketOrder order) {
         this.order = order;
     }

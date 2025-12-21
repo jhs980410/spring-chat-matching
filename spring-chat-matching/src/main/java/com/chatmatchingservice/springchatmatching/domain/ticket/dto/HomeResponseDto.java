@@ -15,6 +15,6 @@ public class HomeResponseDto {
 
     private List<HeroBannerDto> heroBanners;
     private List<EventSummaryDto> featuredEvents;
-    private Map<EventCategory, List<EventSummaryDto>> rankings;
+    private Map<String , List<EventSummaryDto>> rankings;
     private List<EventSummaryDto> openSoonEvents;
 }
