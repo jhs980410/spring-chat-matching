@@ -1,5 +1,4 @@
 import { Button, Card, Divider, Stack, Text } from "@mantine/core";
-import { useNavigate, useLocation } from "react-router-dom";
 import type { EventDetail } from "../../types/eventTypes";
 
 interface Props {
@@ -7,17 +6,26 @@ interface Props {
 }
 
 export default function EventInfoPanel({ event }: Props) {
-  const navigate = useNavigate();
-  const location = useLocation();
+  // 팝업 방식으로 변경했으므로 사용하지 않는 useLocation은 제거했습니다.
 
   const handleReserve = () => {
-    navigate(`/events/${event.id}/reserve`, {
-      state: { from: location.pathname },
-    });
+    const url = `/events/${event.id}/reserve`;
+    
+    // 팝업 창 설정
+    const width = 1100;
+    const height = 800;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+
+    window.open(
+      url,
+      `reserve-${event.id}`,
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
   };
 
   return (
-    <Card withBorder radius="md" p="lg">
+    <Card withBorder radius="md" p="lg" shadow="sm">
       <Stack gap="md">
         <Text fw={600}>공연 일정</Text>
 
@@ -31,17 +39,19 @@ export default function EventInfoPanel({ event }: Props) {
         <Button
           fullWidth
           size="md"
+          color="blue"
           disabled={event.status !== "OPEN"}
           onClick={handleReserve}
         >
-          예매하러 가기
+          {event.status === "OPEN" ? "예매하러 가기" : "판매 예정"}
         </Button>
 
-        <Button variant="outline" fullWidth>
+        <Button variant="outline" fullWidth color="gray">
           공유하기
         </Button>
 
-        <Text size="xs" c="dimmed">
+        {/* textAlign="center" 대신 ta="center"를 사용합니다 */}
+        <Text size="xs" c="dimmed" ta="center">
           오픈 일정은 변경될 수 있습니다.
         </Text>
       </Stack>

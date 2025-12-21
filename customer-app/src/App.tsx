@@ -4,6 +4,7 @@ import api from "./api/axios";
 import { useAuthStore } from "./stores/authStore";
 
 import LoginPage from "./features/login/LoginPage";
+import SignUpPage from "./features/login/SignUpPage";
 import RequestPage from "./features/request/RequestPage";
 import WaitingPage from "./features/waiting/WaitingPage";
 import ChatPage from "./features/chat/ChatPage";
@@ -40,31 +41,32 @@ export default function App() {
   }, []);
 
   if (!isInitialized) return null;
-
-  return (
+return (
     <WsGate>
       <Routes>
-        {/* 메인 */}
-        <Route path="/" element={<HomePage />} />
-
-        {/* 티켓 영역 */}
+        {/* 1. 일반 페이지 (헤더가 있는 레이아웃 적용) */}
         <Route element={<TicketLayout />}>
+          <Route path="/" element={<HomePage />} />
           <Route path="/events/:id" element={<EventDetailPage />} />
-          <Route
-            path="/events/:id/reserve"
-            element={
-              isLoggedIn ? <ReservePage /> : <Navigate to="/login" replace />
-            }
-          />
         </Route>
 
-        {/* 로그인 */}
+        {/* 2. 예매 페이지 (팝업 전용: 레이아웃 외부로 분리) */}
+        {/* 이렇게 외부로 꺼내야 팝업창에 헤더가 나오지 않습니다. */}
+        <Route
+          path="/events/:id/reserve"
+          element={
+            isLoggedIn ? <ReservePage /> : <Navigate to="/login" replace />
+          }
+        />
+
+        {/* 3. 로그인 및 회원가입 */}
         <Route
           path="/login"
           element={isLoggedIn ? <Navigate to="/" replace /> : <LoginPage />}
         />
+        <Route path="/signup" element={<SignUpPage />} />
 
-        {/* 상담 */}
+        {/* 4. 상담 시스템 */}
         <Route
           path="/support"
           element={isLoggedIn ? <SessionGate /> : <Navigate to="/login" replace />}

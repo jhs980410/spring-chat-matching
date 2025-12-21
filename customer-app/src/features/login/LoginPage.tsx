@@ -67,6 +67,13 @@ const handleLogin = async () => {
         <Button fullWidth onClick={handleLogin}>
           로그인
         </Button>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+  <span style={{ fontSize: '14px', color: '#868e96' }}>계정이 없으신가요?</span>
+  <Button variant="transparent" size="xs" onClick={() => navigate("/signup")} style={{ padding: '0 5px' }}>
+    회원가입
+  </Button>
+</div>
+         
       </Card>
     </div>
   );
