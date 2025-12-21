@@ -10,13 +10,17 @@ import WaitingPage from "./features/waiting/WaitingPage";
 import ChatPage from "./features/chat/ChatPage";
 import SessionGate from "./features/session/SessionGate";
 import HomePage from "./features/home/HomePage";
+import MyPageLayout from "./features/me/layout/MyPageLayout";
+import MyPageHome from "./features/me/page/MyPageHome";
+import MyOrders from "./features/me/page/MyOrders";
+import MyOrderDetail from "./features/me/page/MyOrderDetail";
+import MyProfile from "./features/me/page/MyProfile";
 
 import EventDetailPage from "./features/event/pages/EventDetailPage";
 import ReservePage from "./features/event/pages/ReservePage";
 
 import TicketLayout from "./layouts/TicketLayout";
 import WsGate from "./ws/WsGate";
-
 export default function App() {
   const login = useAuthStore((s) => s.login);
   const logout = useAuthStore((s) => s.logout);
@@ -48,24 +52,25 @@ export default function App() {
         {/* 메인 */}
         <Route path="/" element={<HomePage />} />
 
-        {/* 티켓 영역 */}
+        {/* 티켓 */}
         <Route element={<TicketLayout />}>
           <Route path="/events/:id" element={<EventDetailPage />} />
-         
         </Route>
-       <Route
-            path="/events/:id/reserve"
-            element={
-              isLoggedIn ? <ReservePage /> : <Navigate to="/login" replace />
-            }
-          />
-        {/* 로그인 */}
+
+        <Route
+          path="/events/:id/reserve"
+          element={
+            isLoggedIn ? <ReservePage /> : <Navigate to="/login" replace />
+          }
+        />
+
+        {/* 로그인 / 회원가입 */}
         <Route
           path="/login"
           element={isLoggedIn ? <Navigate to="/" replace /> : <LoginPage />}
         />
-         {/* 회원가입 */}
-         <Route path="/signup" element={<SignUpPage />}></Route>
+        <Route path="/signup" element={<SignUpPage />} />
+
         {/* 상담 */}
         <Route
           path="/support"
@@ -76,6 +81,18 @@ export default function App() {
           <Route path="chat/:sessionId" element={<ChatPage />} />
         </Route>
 
+        {/* 🔥 마이페이지 */}
+        <Route
+          path="/me"
+          element={isLoggedIn ? <MyPageLayout /> : <Navigate to="/login" replace />}
+        >
+          <Route index element={<MyPageHome />} />
+          <Route path="orders" element={<MyOrders />} />
+          <Route path="orders/:orderId" element={<MyOrderDetail />} />
+          <Route path="profile" element={<MyProfile />} />
+        </Route>
+
+        {/* fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </WsGate>

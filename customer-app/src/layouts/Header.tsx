@@ -66,9 +66,9 @@ export default function Header() {
         <Button onClick={handleLogin}>로그인</Button>
       ) : (
         <Group>
-          <Button variant="subtle" onClick={() => navigate("/mypage")}>
-            내 예매
-          </Button>
+         <Button variant="subtle" onClick={() => navigate("/me")}>
+  마이페이지
+</Button>
           <Button variant="light" color="red" onClick={handleLogout}>
             로그아웃
           </Button>
