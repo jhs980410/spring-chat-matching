@@ -1,8 +1,12 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.service;
+package com.chatmatchingservice.springchatmatching.domain.order.service;
 
-import com.chatmatchingservice.springchatmatching.domain.ticket.dto.*;
+import com.chatmatchingservice.springchatmatching.domain.event.dto.EventSummaryDto;
+import com.chatmatchingservice.springchatmatching.domain.mypage.dto.MyPageHomeResponseDto;
+import com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderItemResponseDto;
+import com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderResponseDto;
+import com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderRow;
 import com.chatmatchingservice.springchatmatching.domain.ticket.entity.TicketOrderStatus;
-import com.chatmatchingservice.springchatmatching.domain.ticket.repository.MyOrderRepository;
+import com.chatmatchingservice.springchatmatching.domain.order.repository.MyOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

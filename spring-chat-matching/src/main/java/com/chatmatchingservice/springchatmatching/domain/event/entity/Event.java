@@ -1,5 +1,6 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.entity;
+package com.chatmatchingservice.springchatmatching.domain.event.entity;
 
+import com.chatmatchingservice.springchatmatching.domain.ticket.entity.Ticket;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

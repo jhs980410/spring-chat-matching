@@ -1,5 +1,6 @@
 package com.chatmatchingservice.springchatmatching.domain.ticket.entity;
 
+import com.chatmatchingservice.springchatmatching.domain.event.entity.Event;
 import jakarta.persistence.*;
 import lombok.*;
 

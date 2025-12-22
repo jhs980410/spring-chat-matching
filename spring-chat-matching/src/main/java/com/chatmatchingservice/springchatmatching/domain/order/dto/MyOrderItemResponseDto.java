@@ -1,4 +1,4 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.dto;
+package com.chatmatchingservice.springchatmatching.domain.order.dto;
 
 import lombok.Getter;
 

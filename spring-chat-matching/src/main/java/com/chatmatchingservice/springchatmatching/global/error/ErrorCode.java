@@ -32,6 +32,54 @@ public enum ErrorCode {
     COUNSELOR_NOT_FOUND(HttpStatus.NOT_FOUND, "COUNSELOR_001", "상담사를 찾을 수 없습니다."),
     COUNSELOR_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "COUNSELOR_002", "상담사가 상담 가능한 상태가 아닙니다."),
 
+    // ======== 예매자 (ReserveUser) ========
+    RESERVE_USER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "RESERVE_USER_001",
+            "예매자 정보를 찾을 수 없습니다."
+    ),
+
+    RESERVE_USER_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "RESERVE_USER_002",
+            "해당 예매자 정보에 접근할 수 없습니다."
+    ),
+
+    RESERVE_USER_ALREADY_USED(
+            HttpStatus.BAD_REQUEST,
+            "RESERVE_USER_003",
+            "주문에 사용된 예매자는 삭제할 수 없습니다."
+    ),
+
+    RESERVE_USER_DEFAULT_REQUIRED(
+            HttpStatus.BAD_REQUEST,
+            "RESERVE_USER_004",
+            "기본 예매자는 최소 1명 이상 존재해야 합니다."
+    ),
+    // ======== 주문 (Order) ========
+    ORDER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "ORDER_001",
+            "주문을 찾을 수 없습니다."
+    ),
+
+    ORDER_ACCESS_DENIED(
+            HttpStatus.FORBIDDEN,
+            "ORDER_002",
+            "해당 주문에 접근할 수 없습니다."
+    ),
+
+    ORDER_INVALID_STATUS(
+            HttpStatus.BAD_REQUEST,
+            "ORDER_003",
+            "주문 상태가 올바르지 않습니다."
+    ),
+
+    ORDER_ALREADY_PAID(
+            HttpStatus.CONFLICT,
+            "ORDER_004",
+            "이미 결제가 완료된 주문입니다."
+    ),
 
     // ======== 세션 ========
     SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "SESSION_001", "세션을 찾을 수 없습니다."),

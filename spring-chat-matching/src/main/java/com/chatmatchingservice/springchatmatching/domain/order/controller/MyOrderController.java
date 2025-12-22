@@ -1,11 +1,10 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.controller;
+package com.chatmatchingservice.springchatmatching.domain.order.controller;
 
-import com.chatmatchingservice.springchatmatching.domain.ticket.dto.MyOrderResponseDto;
-import com.chatmatchingservice.springchatmatching.domain.ticket.dto.MyPageHomeResponseDto;
-import com.chatmatchingservice.springchatmatching.domain.ticket.service.MyOrderService;
+import com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderResponseDto;
+import com.chatmatchingservice.springchatmatching.domain.mypage.dto.MyPageHomeResponseDto;
+import com.chatmatchingservice.springchatmatching.domain.order.service.MyOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;

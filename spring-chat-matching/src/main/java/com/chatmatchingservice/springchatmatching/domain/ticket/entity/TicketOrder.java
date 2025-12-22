@@ -1,10 +1,13 @@
 package com.chatmatchingservice.springchatmatching.domain.ticket.entity;
 
+import com.chatmatchingservice.springchatmatching.domain.ReserveUser.entity.ReserveUser;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.Event;
 import com.chatmatchingservice.springchatmatching.domain.user.entity.AppUser;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 @Entity
 @Table(name = "ticket_order")
@@ -23,6 +26,10 @@ public class TicketOrder {
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reserve_user_id", nullable = false)
+    private ReserveUser reserveUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
@@ -33,14 +40,18 @@ public class TicketOrder {
     @Column(name = "total_price", nullable = false)
     private int totalPrice;
 
-    @OneToMany(
-            mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<TicketOrderItem> items;
-    @Column(name = "ordered_at", updatable = false)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<TicketOrderItem> items = new ArrayList<>();
+
+    @Column(name = "ordered_at")
     private LocalDateTime orderedAt;
+
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -56,5 +67,20 @@ public class TicketOrder {
     public void addItem(TicketOrderItem item) {
         this.items.add(item);
         item.setOrder(this);
+    }
+
+    public void markOrdered() {
+        this.status = TicketOrderStatus.ORDERED;
+        this.orderedAt = LocalDateTime.now();
+    }
+
+    public void markPaid() {
+        this.status = TicketOrderStatus.PAID;
+        this.paidAt = LocalDateTime.now();
+    }
+
+    public void cancel() {
+        this.status = TicketOrderStatus.CANCELLED;
+        this.cancelledAt = LocalDateTime.now();
     }
 }

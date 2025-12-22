@@ -1,11 +1,15 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.service;
+package com.chatmatchingservice.springchatmatching.domain.event.service;
 
+import com.chatmatchingservice.springchatmatching.domain.event.dto.EventDetailDto;
+import com.chatmatchingservice.springchatmatching.domain.event.dto.EventSummaryDto;
+import com.chatmatchingservice.springchatmatching.domain.mypage.dto.HeroBannerDto;
+import com.chatmatchingservice.springchatmatching.domain.mypage.dto.HomeResponseDto;
 import com.chatmatchingservice.springchatmatching.domain.ticket.dto.*;
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.Event;
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.EventCategory;
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.EventStatus;
-import com.chatmatchingservice.springchatmatching.domain.ticket.repository.EventCategoryRepository;
-import com.chatmatchingservice.springchatmatching.domain.ticket.repository.EventRepository;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.Event;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.EventCategory;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.EventStatus;
+import com.chatmatchingservice.springchatmatching.domain.event.repository.EventCategoryRepository;
+import com.chatmatchingservice.springchatmatching.domain.event.repository.EventRepository;
 import com.chatmatchingservice.springchatmatching.domain.ticket.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

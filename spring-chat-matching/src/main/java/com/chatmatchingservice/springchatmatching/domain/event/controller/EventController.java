@@ -1,8 +1,8 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.controller;
+package com.chatmatchingservice.springchatmatching.domain.event.controller;
 
-import com.chatmatchingservice.springchatmatching.domain.ticket.dto.EventDetailDto;
-import com.chatmatchingservice.springchatmatching.domain.ticket.dto.HomeResponseDto;
-import com.chatmatchingservice.springchatmatching.domain.ticket.service.EventService;
+import com.chatmatchingservice.springchatmatching.domain.event.dto.EventDetailDto;
+import com.chatmatchingservice.springchatmatching.domain.mypage.dto.HomeResponseDto;
+import com.chatmatchingservice.springchatmatching.domain.event.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

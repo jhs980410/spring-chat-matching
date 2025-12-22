@@ -1,6 +1,6 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.repository;
+package com.chatmatchingservice.springchatmatching.domain.event.repository;
 
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.EventCategory;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.EventCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

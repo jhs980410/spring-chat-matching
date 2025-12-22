@@ -1,6 +1,6 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.dto;
+package com.chatmatchingservice.springchatmatching.domain.mypage.dto;
 
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.EventCategory;
+import com.chatmatchingservice.springchatmatching.domain.event.dto.EventSummaryDto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

@@ -1,4 +1,4 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.entity;
+package com.chatmatchingservice.springchatmatching.domain.event.entity;
 
 public enum EventStatus {
     OPEN,        // 예매 가능

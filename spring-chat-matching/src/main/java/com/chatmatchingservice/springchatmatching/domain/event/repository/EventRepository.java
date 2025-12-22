@@ -1,8 +1,8 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.repository;
+package com.chatmatchingservice.springchatmatching.domain.event.repository;
 
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.Event;
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.EventCategory;
-import com.chatmatchingservice.springchatmatching.domain.ticket.entity.EventStatus;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.Event;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.EventCategory;
+import com.chatmatchingservice.springchatmatching.domain.event.entity.EventStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
