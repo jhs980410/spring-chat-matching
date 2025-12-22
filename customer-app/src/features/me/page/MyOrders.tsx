@@ -58,7 +58,7 @@ export default function MyOrders() {
 
       <Divider mb="md" />
 
-      <Table striped highlightOnHover withTableBorder verticalSpacing="md">
+      <Table striped withTableBorder verticalSpacing="md">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>공연명</Table.Th>
@@ -79,7 +79,20 @@ export default function MyOrders() {
             const status = STATUS_MAP[order.orderStatus];
 
             return (
-              <Table.Tr key={order.orderId}>
+              <Table.Tr
+                key={order.orderId}
+                onClick={() => navigate(`/me/orders/${order.orderId}`)}
+                style={{
+                  cursor: "pointer",
+                  transition: "background-color 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#f8f9fa";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "";
+                }}
+              >
                 {/* 공연명 */}
                 <Table.Td>
                   <Text fw={600}>{order.event.title}</Text>
@@ -103,11 +116,11 @@ export default function MyOrders() {
                   <Badge color={status.color}>{status.label}</Badge>
                 </Table.Td>
 
-                {/* 상세 */}
-                <Table.Td>
+                {/* 상세 버튼 */}
+                <Table.Td onClick={(e) => e.stopPropagation()}>
                   <Button
                     size="xs"
-                    variant="outline"
+                    variant="subtle"
                     onClick={() =>
                       navigate(`/me/orders/${order.orderId}`)
                     }

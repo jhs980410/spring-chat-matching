@@ -13,8 +13,39 @@ import {
 } from "@mantine/core";
 import api from "../../../api/axios";
 
+/* =======================
+   타입 정의
+======================= */
+
+type OrderStatus = "PAID" | "CANCELLED" | "REFUNDED" | "PENDING";
+
+type OrderItem = {
+  ticketName: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+type OrderDetail = {
+  orderId: number;
+  orderStatus: OrderStatus;
+  orderedAt: string;
+  totalPrice: number;
+  paidAt?: string | null;
+  event: {
+    id: number;
+    title: string;
+    thumbnail: string;
+    startAt: string;
+  };
+  items: OrderItem[];
+};
+
+/* =======================
+   상태 매핑
+======================= */
+
 const STATUS_MAP: Record<
-  "PAID" | "CANCELLED" | "REFUNDED" | "PENDING",
+  OrderStatus,
   { label: string; color: string }
 > = {
   PAID: { label: "예매 완료", color: "blue" },
@@ -24,10 +55,12 @@ const STATUS_MAP: Record<
 };
 
 export default function MyOrderDetail() {
-  const { orderId } = useParams();
-  const [order, setOrder] = useState<any>(null);
+  const { orderId } = useParams<{ orderId: string }>();
+  const [order, setOrder] = useState<OrderDetail | null>(null);
 
   useEffect(() => {
+    if (!orderId) return;
+
     api.get(`/me/orders/${orderId}`).then((res) => {
       setOrder(res.data);
     });
@@ -45,25 +78,28 @@ export default function MyOrderDetail() {
 
       {/* 1️⃣ 주문 요약 */}
       <Card withBorder mb="md">
-        <Group justify="space-between">
+        <Group justify="space-between" align="flex-start">
           <Box>
             <Text fw={700}>주문번호 {order.orderId}</Text>
             <Text size="sm" c="dimmed">
               예매일 {new Date(order.orderedAt).toLocaleString()}
             </Text>
           </Box>
+
           <Badge color={status.color}>{status.label}</Badge>
         </Group>
       </Card>
 
       {/* 2️⃣ 공연 정보 */}
       <Card withBorder mb="md">
-        <Group>
+        <Group align="flex-start" wrap="nowrap">
           <Image
             src={order.event.thumbnail}
             w={100}
             radius="sm"
+            alt={order.event.title}
           />
+
           <Box>
             <Text fw={700}>{order.event.title}</Text>
             <Text size="sm">
@@ -79,8 +115,13 @@ export default function MyOrderDetail() {
           예매 내역
         </Title>
 
-        {order.items.map((item: any, idx: number) => (
-          <Group key={idx} justify="space-between">
+        {order.items.map((item, idx) => (
+          <Group
+            key={idx}
+            justify="space-between"
+            align="flex-start"
+            mb={4}
+          >
             <Text>
               {item.ticketName} × {item.quantity}
             </Text>

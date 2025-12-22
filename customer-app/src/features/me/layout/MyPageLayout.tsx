@@ -7,22 +7,25 @@ export default function MyPageLayout() {
   return (
     <>
       <Header />
-<Container
-  size={1600}
-  py="xl"
-  px="lg"               // 좌우 여백 통제
-  style={{ background: "#e6f0ff" }}
->
+<Container size={1600} py="xl" px="lg">
   <Flex gap="xl" align="flex-start">
     <Box w={240}>
       <MySidebar />
     </Box>
 
-    <Box style={{ flex: 1 }}>
+    <Box
+      style={{
+        flex: 1,
+        background: "#f5f6f8",
+        padding: "24px",
+        borderRadius: 8,
+      }}
+    >
       <Outlet />
     </Box>
   </Flex>
 </Container>
+
 
     </>
   );
