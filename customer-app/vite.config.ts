@@ -7,6 +7,7 @@ export default defineConfig({
     global: "window", // 🔥 핵심
   },
   server: {
+    port: 5174,
     proxy: {
       "/api": {
         target: "http://localhost:8080",

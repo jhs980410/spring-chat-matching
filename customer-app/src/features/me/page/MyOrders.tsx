@@ -3,25 +3,24 @@ import { useEffect, useState } from "react";
 import {
   Table,
   Title,
-  Group,
   Text,
   Button,
   Divider,
   Box,
+  Badge,
 } from "@mantine/core";
 import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 
 type Order = {
   orderId: number;
-  orderStatus: string;
+  orderStatus: "PAID" | "CANCELLED" | "REFUNDED" | "PENDING";
   orderedAt: string | null;
   totalPrice: number;
   event: {
-    eventId: number;
+    id: number;
     title: string;
     thumbnail: string;
-    venue: string;
     startAt: string;
   };
   items: {
@@ -29,6 +28,16 @@ type Order = {
     quantity: number;
     unitPrice: number;
   }[];
+};
+
+const STATUS_MAP: Record<
+  Order["orderStatus"],
+  { label: string; color: string }
+> = {
+  PAID: { label: "예매 완료", color: "blue" },
+  CANCELLED: { label: "취소", color: "red" },
+  REFUNDED: { label: "환불", color: "orange" },
+  PENDING: { label: "결제 대기", color: "gray" },
 };
 
 export default function MyOrders() {
@@ -44,17 +53,12 @@ export default function MyOrders() {
   return (
     <Box>
       <Title order={3} mb="md">
-        최근 예매내역
+        예매내역
       </Title>
 
       <Divider mb="md" />
 
-      <Table
-        striped
-        highlightOnHover
-        withTableBorder
-        verticalSpacing="md"
-      >
+      <Table striped highlightOnHover withTableBorder verticalSpacing="md">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>공연명</Table.Th>
@@ -62,7 +66,7 @@ export default function MyOrders() {
             <Table.Th>매수</Table.Th>
             <Table.Th>총 결제금액</Table.Th>
             <Table.Th>상태</Table.Th>
-            <Table.Th></Table.Th>
+            <Table.Th />
           </Table.Tr>
         </Table.Thead>
 
@@ -72,15 +76,13 @@ export default function MyOrders() {
               (sum, i) => sum + i.quantity,
               0
             );
+            const status = STATUS_MAP[order.orderStatus];
 
             return (
               <Table.Tr key={order.orderId}>
                 {/* 공연명 */}
                 <Table.Td>
                   <Text fw={600}>{order.event.title}</Text>
-                  <Text size="sm" c="dimmed">
-                    {order.event.venue}
-                  </Text>
                 </Table.Td>
 
                 {/* 관람일 */}
@@ -98,9 +100,7 @@ export default function MyOrders() {
 
                 {/* 상태 */}
                 <Table.Td>
-                  <Text c={order.orderStatus === "PAID" ? "blue" : "red"}>
-                    {order.orderStatus}
-                  </Text>
+                  <Badge color={status.color}>{status.label}</Badge>
                 </Table.Td>
 
                 {/* 상세 */}

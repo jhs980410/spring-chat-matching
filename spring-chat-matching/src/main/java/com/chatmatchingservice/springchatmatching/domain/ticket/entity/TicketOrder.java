@@ -39,6 +39,8 @@ public class TicketOrder {
             orphanRemoval = true
     )
     private List<TicketOrderItem> items;
+    @Column(name = "ordered_at", updatable = false)
+    private LocalDateTime orderedAt;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
