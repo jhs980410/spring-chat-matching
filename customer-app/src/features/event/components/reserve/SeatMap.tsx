@@ -22,7 +22,7 @@ export default function SeatMap({ seats, onSelectSeat }: Props) {
             key={seat.id}
             className={`${styles.seat} ${seatClass}`}
             onClick={() =>
-              seat.status === "AVAILABLE" && onSelectSeat(seat.id)
+              seat.status !== "SOLD" && onSelectSeat(seat.id)
             }
             title={`${seat.row}열 ${seat.number}번`}
           />

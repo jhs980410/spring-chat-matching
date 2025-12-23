@@ -49,4 +49,9 @@ public interface ReserveUserRepository extends JpaRepository<ReserveUser, Long> 
     boolean existsOrderByReserveUserId(@Param("reserveUserId") Long reserveUserId);
     // ⭐ default 삭제 보정용
     Optional<ReserveUser> findFirstByUserIdOrderByIdAsc(Long userId);
+
+    List<ReserveUser> findByUserId(Long userId);
+
+    boolean existsByUserIdAndIsDefaultTrue(Long userId);
+
 }

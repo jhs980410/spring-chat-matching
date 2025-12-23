@@ -64,12 +64,30 @@ public class TicketOrder {
         }
     }
 
+    /* =========================
+       🔥 도메인 메서드
+       ========================= */
+
+    public static TicketOrder create(
+            AppUser user,
+            ReserveUser reserveUser,
+            Event event
+    ) {
+        TicketOrder order = new TicketOrder();
+        order.user = user;
+        order.reserveUser = reserveUser;
+        order.event = event;
+        order.status = TicketOrderStatus.PENDING;
+        return order;
+    }
+
     public void addItem(TicketOrderItem item) {
         this.items.add(item);
         item.setOrder(this);
     }
 
-    public void markOrdered() {
+    public void complete(int totalPrice) {
+        this.totalPrice = totalPrice;
         this.status = TicketOrderStatus.ORDERED;
         this.orderedAt = LocalDateTime.now();
     }
