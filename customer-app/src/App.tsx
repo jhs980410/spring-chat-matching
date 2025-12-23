@@ -15,6 +15,8 @@ import MyPageHome from "./features/me/page/MyPageHome";
 import MyOrders from "./features/me/page/MyOrders";
 import MyOrderDetail from "./features/me/page/MyOrderDetail";
 import MyProfile from "./features/me/page/MyProfile";
+import MyReserveUsers from "./features/me/page/MyReserveUsers";
+import ReserveUserForm from "./features/me/page/ReserveUserForm";
 
 import EventDetailPage from "./features/event/pages/EventDetailPage";
 import ReservePage from "./features/event/pages/ReservePage";
@@ -90,6 +92,9 @@ export default function App() {
           <Route path="orders" element={<MyOrders />} />
           <Route path="orders/:orderId" element={<MyOrderDetail />} />
           <Route path="profile" element={<MyProfile />} />
+          <Route path="reserve-users" element={<MyReserveUsers />} />
+          <Route path="reserve-users/new" element={<ReserveUserForm />} />
+          <Route path="reserve-users/:id" element={<ReserveUserForm />} />
         </Route>
 
         {/* fallback */}

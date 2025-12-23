@@ -1,40 +1,43 @@
-import { Button, Card, Divider, Stack, Text } from "@mantine/core";
-import type { TicketOption } from "../../types/reserveTypes";
+import type { Seat } from "./types";
+import styles from "./ReserveSummaryPanel.module.css";
 
 interface Props {
-  selected: TicketOption | null;
+  selectedSeats: Seat[];
+  price: number;
 }
 
-export default function ReserveSummaryPanel({ selected }: Props) {
+export default function ReserveSummaryPanel({
+  selectedSeats,
+  price,
+}: Props) {
+  const total = selectedSeats.length * price;
+
   return (
-    <Card withBorder radius="md" p="lg">
-      <Stack gap="md">
-        <Text fw={600}>예매 요약</Text>
+    <div className={styles.panel}>
+      <h3 className={styles.title}>선택 좌석</h3>
 
-        {selected ? (
-          <>
-            <Text size="sm">좌석: {selected.name}</Text>
-            <Text size="sm">
-              가격: {selected.price.toLocaleString()}원
-            </Text>
-          </>
-        ) : (
-          <Text size="sm" c="dimmed">
-            좌석을 선택하세요
-          </Text>
-        )}
+      {selectedSeats.length === 0 ? (
+        <p className={styles.empty}>
+          선택한 좌석이 없습니다.
+        </p>
+      ) : (
+        <ul className={styles.seatList}>
+          {selectedSeats.map((s) => (
+            <li key={s.id} className={styles.seatItem}>
+              {s.row}열 {s.number}번
+            </li>
+          ))}
+        </ul>
+      )}
 
-        <Divider />
+      <div className={styles.divider} />
 
-        <Text fw={700}>
-          총 금액:{" "}
-          {selected ? selected.price.toLocaleString() : 0}원
-        </Text>
-
-        <Button fullWidth disabled={!selected}>
-          결제하기
-        </Button>
-      </Stack>
-    </Card>
+      <div className={styles.total}>
+        총 금액 <strong>{total.toLocaleString()}원</strong>
+      </div>
+      <button className={styles.reserveButton}>
+  예매하기
+</button>
+    </div>
   );
 }

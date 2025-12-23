@@ -51,4 +51,23 @@ public class RedisKeyManager {
     public static String userDisconnectTime(Long userId) {
         return "user:" + userId + ":disconnectTime";
     }
+
+
+    // ===================== 🎟️ 좌석 예매 =====================
+
+    /** 좌석 락 */
+    public static String seatLock(Long eventId, Long seatId) {
+        return "seat:lock:event:" + eventId + ":seat:" + seatId;
+    }
+
+    /** 유저가 잡은 좌석 목록 */
+    public static String userLockedSeats(Long userId, Long eventId) {
+        return "user:" + userId + ":lockedSeats:event:" + eventId;
+    }
+
+    /** 예매 진행 상태 */
+    public static String reservationStatus(Long eventId, Long userId) {
+        return "reservation:event:" + eventId + ":user:" + userId;
+    }
+
 }

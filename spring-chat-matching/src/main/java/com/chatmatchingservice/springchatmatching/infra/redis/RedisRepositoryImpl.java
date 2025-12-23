@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
-
+import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -319,6 +319,7 @@ public class RedisRepositoryImpl implements RedisRepository {
                 .filter(key -> status.equals(redisStringTemplate.opsForValue().get(key)))
                 .count();
     }
+
     // ==========================================
     // WebSocket Pub/Sub
     // ==========================================
@@ -377,4 +378,102 @@ public class RedisRepositoryImpl implements RedisRepository {
 
         return null;
     }
+
+    // 좌석 락
+    public static String seatLock(Long eventId, Long seatId) {
+        return "seat:lock:event:" + eventId + ":seat:" + seatId;
+    }
+
+    // 유저가 잡은 좌석 목록
+    public static String userLockedSeats(Long userId, Long eventId) {
+        return "user:" + userId + ":event:" + eventId + ":lockedSeats";
+    }
+
+    // 예매 상태
+    public static String reservationStatus(Long eventId, Long userId) {
+        return "reservation:event:" + eventId + ":user:" + userId;
+    }
+    // ================================
+// 🎟️ 좌석 예매 (Seat Lock)
+// ================================
+
+    @Override
+    public boolean tryLockSeat(Long eventId, Long seatId, Long userId, long ttlSeconds) {
+        String key = RedisKeyManager.seatLock(eventId, seatId);
+
+        Boolean success = redisStringTemplate.opsForValue().setIfAbsent(
+                key,
+                userId.toString(),
+                ttlSeconds,
+                TimeUnit.SECONDS
+        );
+
+        return Boolean.TRUE.equals(success);
+    }
+
+    @Override
+    public void unlockSeat(Long eventId, Long seatId) {
+        redisStringTemplate.delete(
+                RedisKeyManager.seatLock(eventId, seatId)
+        );
+    }
+
+    @Override
+    public void addUserLockedSeat(Long userId, Long eventId, Long seatId) {
+        redisStringTemplate.opsForSet().add(
+                RedisKeyManager.userLockedSeats(userId, eventId),
+                seatId.toString()
+        );
+    }
+
+    @Override
+    public Set<Long> getUserLockedSeats(Long userId, Long eventId) {
+        Set<String> values = redisStringTemplate.opsForSet()
+                .members(RedisKeyManager.userLockedSeats(userId, eventId));
+
+        if (values == null) return Set.of();
+
+        return values.stream()
+                .map(Long::parseLong)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public void removeUserLockedSeat(Long userId, Long eventId, Long seatId) {
+        redisStringTemplate.opsForSet().remove(
+                RedisKeyManager.userLockedSeats(userId, eventId),
+                seatId.toString()
+        );
+    }
+
+    @Override
+    public void clearUserLockedSeats(Long userId, Long eventId) {
+        redisStringTemplate.delete(
+                RedisKeyManager.userLockedSeats(userId, eventId)
+        );
+    }
+    @Override
+    public void setReservationStatus(Long eventId, Long userId, String status) {
+        redisStringTemplate.opsForValue().set(
+                RedisKeyManager.reservationStatus(eventId, userId),
+                status
+        );
+    }
+
+    @Override
+    public String getReservationStatus(Long eventId, Long userId) {
+        return redisStringTemplate.opsForValue().get(
+                RedisKeyManager.reservationStatus(eventId, userId)
+        );
+    }
+
+    @Override
+    public void clearReservationStatus(Long eventId, Long userId) {
+        redisStringTemplate.delete(
+                RedisKeyManager.reservationStatus(eventId, userId)
+        );
+    }
+
+
+
 }

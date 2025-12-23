@@ -80,4 +80,40 @@ public interface RedisRepository {
 
    //"현재 상태별 세션 수".
     long countByStatus(String status);
+
+    // ================================
+// 🎟️ 좌석 예매 (Seat Lock)
+// ================================
+
+    /**
+     * 좌석 락 시도
+     * @return true = 락 성공, false = 이미 다른 유저가 선점
+     */
+    boolean tryLockSeat(Long eventId, Long seatId, Long userId, long ttlSeconds);
+
+    /**
+     * 좌석 락 해제 (결제 실패 / 취소 / TTL 만료 전 수동 해제)
+     */
+    void unlockSeat(Long eventId, Long seatId);
+
+    /**
+     * 유저가 락 잡은 좌석 기록
+     * (결제 실패 / 새로고침 / 뒤로가기 대응)
+     */
+    void addUserLockedSeat(Long userId, Long eventId, Long seatId);
+
+    Set<Long> getUserLockedSeats(Long userId, Long eventId);
+
+    void removeUserLockedSeat(Long userId, Long eventId, Long seatId);
+
+    void clearUserLockedSeats(Long userId, Long eventId);
+    /**
+     * 유저 예매 진행 상태
+     * value: IN_PROGRESS / DONE
+     */
+    void setReservationStatus(Long eventId, Long userId, String status);
+
+    String getReservationStatus(Long eventId, Long userId);
+
+    void clearReservationStatus(Long eventId, Long userId);
 }

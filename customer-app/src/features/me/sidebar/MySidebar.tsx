@@ -36,7 +36,7 @@ export default function MySidebar() {
 
       {/* 예매자 정보 */}
       <Section title="예매자 정보">
-        <SidebarLink to="/me/reserve-users" label="예매자 관리" disabled />
+         <SidebarLink to="/me/reserve-users" label="예매자 관리" />
       </Section>
 
       <Divider my="sm" />

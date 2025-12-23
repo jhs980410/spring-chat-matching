@@ -1,33 +1,88 @@
-import { Container, Grid } from "@mantine/core";
 import { useState } from "react";
+import styles from "../components/reserve/ReservePage.module.css";
 
-import ReserveTicketList from "../components/reserve/ReserveTicketList";
+import { sections } from "../components/reserve/sectionDummy";
+import { seats as seatDummy } from "../components/reserve/seatDummy";
+import type { Seat } from "../components/reserve/types";
+
+import SectionMap from "../components/reserve/SectionMap";
+import SeatMap from "../components/reserve/SeatMap";
 import ReserveSummaryPanel from "../components/reserve/ReserveSummaryPanel";
-import type { TicketOption } from "../types/reserveTypes";
-
-const MOCK_TICKETS: TicketOption[] = [
-  { id: 1, name: "R석", price: 120000, remain: 50 },
-  { id: 2, name: "S석", price: 90000, remain: 120 },
-];
 
 export default function ReservePage() {
-  const [selected, setSelected] = useState<TicketOption | null>(null);
+  const [selectedSectionId, setSelectedSectionId] =
+    useState<number | null>(null);
+
+  const [seatList, setSeatList] =
+    useState<Seat[]>(seatDummy);
+
+  const [selectedSeats, setSelectedSeats] =
+    useState<Seat[]>([]);
+
+  const selectedSection = sections.find(
+    (s) => s.id === selectedSectionId
+  );
+
+  const handleSeatSelect = (seatId: number) => {
+    const seat = seatList.find((s) => s.id === seatId);
+    if (!seat) return;
+
+    // 이미 선택된 좌석 해제
+    if (selectedSeats.some((s) => s.id === seatId)) {
+      setSeatList((prev) =>
+        prev.map((s) =>
+          s.id === seatId ? { ...s, status: "AVAILABLE" } : s
+        )
+      );
+      setSelectedSeats((prev) =>
+        prev.filter((s) => s.id !== seatId)
+      );
+      return;
+    }
+
+    // 최대 선택 제한
+    if (selectedSeats.length >= 4) {
+      alert("최대 4좌석까지 선택 가능합니다.");
+      return;
+    }
+
+    // 선택 처리
+    setSeatList((prev) =>
+      prev.map((s) =>
+        s.id === seatId ? { ...s, status: "SELECTED" } : s
+      )
+    );
+
+    setSelectedSeats((prev) => [...prev, seat]);
+  };
 
   return (
-    <Container size="lg">
-      <Grid gutter="xl">
-        <Grid.Col span={8}>
-          <ReserveTicketList
-            tickets={MOCK_TICKETS}
-            selected={selected}
-            onSelect={setSelected}
-          />
-        </Grid.Col>
+    <div className={styles.wrapper}>
+      <div className={styles.left}>
+        <div className={styles.stage}>STAGE</div>
 
-        <Grid.Col span={4}>
-          <ReserveSummaryPanel selected={selected} />
-        </Grid.Col>
-      </Grid>
-    </Container>
+        <SectionMap
+          sections={sections}
+          selectedSectionId={selectedSectionId}
+          onSelect={setSelectedSectionId}
+        />
+
+        {selectedSectionId && (
+          <SeatMap
+            seats={seatList.filter(
+              (s) => s.sectionId === selectedSectionId
+            )}
+            onSelectSeat={handleSeatSelect}
+          />
+        )}
+      </div>
+
+      <div className={styles.right}>
+        <ReserveSummaryPanel
+          selectedSeats={selectedSeats}
+          price={selectedSection?.ticketPrice ?? 0}
+        />
+      </div>
+    </div>
   );
 }

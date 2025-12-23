@@ -1,0 +1,48 @@
+/* 전체 레이아웃 */
+.wrapper {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+
+  background-color: #f1f3f5;
+  padding: 24px;
+
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* 좌석 영역 (무대 + 좌석 맵) */
+.left {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 24px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  min-height: 600px;
+}
+
+/* STAGE 표시 */
+.stage {
+  text-align: center;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: #868e96;
+
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 12px;
+}
+
+/* 우측 요약 패널 */
+.right {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+
+  height: fit-content;
+  position: sticky;
+  top: 24px;
+}
