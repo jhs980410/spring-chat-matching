@@ -63,7 +63,7 @@ public class ReserveService {
         orderRepository.save(order);
 
         // 4️⃣ 주문 아이템 생성
-        int totalPrice = 0;
+        long totalPrice = 0;
 
         for (OrderSeatItemDto item : request.items()) {
 

@@ -379,20 +379,7 @@ public class RedisRepositoryImpl implements RedisRepository {
         return null;
     }
 
-    // 좌석 락
-    public static String seatLock(Long eventId, Long seatId) {
-        return "seat:lock:event:" + eventId + ":seat:" + seatId;
-    }
 
-    // 유저가 잡은 좌석 목록
-    public static String userLockedSeats(Long userId, Long eventId) {
-        return "user:" + userId + ":event:" + eventId + ":lockedSeats";
-    }
-
-    // 예매 상태
-    public static String reservationStatus(Long eventId, Long userId) {
-        return "reservation:event:" + eventId + ":user:" + userId;
-    }
     // ================================
 // 🎟️ 좌석 예매 (Seat Lock)
 // ================================
@@ -473,6 +460,16 @@ public class RedisRepositoryImpl implements RedisRepository {
                 RedisKeyManager.reservationStatus(eventId, userId)
         );
     }
+
+    @Override
+    public boolean isSeatLocked(Long eventId, Long seatId) {
+        return Boolean.TRUE.equals(
+                redisStringTemplate.hasKey(
+                        RedisKeyManager.seatLock(eventId, seatId)
+                )
+        );
+    }
+
 
 
 

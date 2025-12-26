@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record OrderCreateResponseDto(
         Long orderId,
-        int totalPrice,
+        Long totalPrice,
         String status,
         LocalDateTime orderedAt
 ) {}

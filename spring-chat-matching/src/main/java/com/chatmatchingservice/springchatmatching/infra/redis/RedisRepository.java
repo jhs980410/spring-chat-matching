@@ -116,4 +116,6 @@ public interface RedisRepository {
     String getReservationStatus(Long eventId, Long userId);
 
     void clearReservationStatus(Long eventId, Long userId);
+
+    boolean isSeatLocked(Long eventId, Long seatId);
 }

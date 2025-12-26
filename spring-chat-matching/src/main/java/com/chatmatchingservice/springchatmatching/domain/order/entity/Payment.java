@@ -26,7 +26,7 @@ public class Payment {
     private PaymentMethod method;
 
     @Column(nullable = false)
-    private int amount;
+    private Long amount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -53,14 +53,21 @@ public class Payment {
        🔥 도메인 로직
        ========================= */
 
-    public static Payment create(TicketOrder order, PaymentMethod method) {
+    public static Payment create(
+            TicketOrder order,
+            PaymentMethod method,
+            Long amount,
+            String pgTid
+    ) {
         Payment payment = new Payment();
         payment.order = order;
         payment.method = method;
-        payment.amount = order.getTotalPrice();
+        payment.amount = amount;
+        payment.pgTid = pgTid;
         payment.status = PaymentStatus.READY;
         return payment;
     }
+
 
     public void markPaid() {
         this.status = PaymentStatus.PAID;

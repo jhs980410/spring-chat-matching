@@ -38,7 +38,7 @@ public class TicketOrder {
     private TicketOrderStatus status;
 
     @Column(name = "total_price", nullable = false)
-    private int totalPrice;
+    private Long totalPrice;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -86,7 +86,7 @@ public class TicketOrder {
         item.setOrder(this);
     }
 
-    public void complete(int totalPrice) {
+    public void complete(Long totalPrice) {
         this.totalPrice = totalPrice;
         this.status = TicketOrderStatus.ORDERED;
         this.orderedAt = LocalDateTime.now();

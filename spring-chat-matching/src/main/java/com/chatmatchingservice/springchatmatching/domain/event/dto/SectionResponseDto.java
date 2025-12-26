@@ -9,6 +9,6 @@ public record SectionResponseDto(
         String grade,          // VIP / R / S
         int price,             // ticket.price
         int totalSeats,
-        int remainSeats,
+        Long remainSeats,
         List<SeatResponseDto> seats
 ) {}

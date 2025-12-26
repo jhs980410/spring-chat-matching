@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 public record PaymentResponseDto(
         Long paymentId,
         Long orderId,
-        int amount,
+        Long amount,
         String status,        // PAID / FAILED / REFUNDED
         LocalDateTime paidAt
 ) {}
