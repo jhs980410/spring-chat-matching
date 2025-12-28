@@ -12,15 +12,13 @@ public interface TicketOrderItemRepository extends JpaRepository<TicketOrderItem
     List<TicketOrderItem> findByOrderId(Long orderId);
 
     @Query("""
-        select distinct s.id
-        from TicketOrderItem i
-        join i.order o
-        join i.ticket t
-        join VenueSection vs on vs.ticket.id = t.id
-        join Seat s on s.section.id = vs.id
-        where o.event.id = :eventId
-        and o.status = 'PAID'
-    """)
+    select distinct s.id
+    from TicketOrderItem i
+    join i.order o
+    join i.seat s
+    where o.event.id = :eventId
+      and o.status = 'PAID'
+""")
     Set<Long> findSoldSeatIds(Long eventId);
 
 }

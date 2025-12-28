@@ -24,7 +24,7 @@ public class Ticket {
     private String name; // VIP, R석, S석
 
     @Column(nullable = false)
-    private int price;
+    private Long price;
 
     @Column(name = "total_quantity", nullable = false)
     private int totalQuantity;

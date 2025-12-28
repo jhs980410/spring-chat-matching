@@ -13,7 +13,7 @@ public class MyOrderRow {
     private Long orderId;
     private TicketOrderStatus orderStatus;
     private LocalDateTime orderedAt;
-    private Integer totalPrice;
+    private Long totalPrice;
 
     private Long eventId;
     private String eventTitle;
@@ -23,6 +23,6 @@ public class MyOrderRow {
 
     private String ticketName;
     private Integer quantity;
-    private Integer unitPrice;
+    private Long unitPrice;
 }
 

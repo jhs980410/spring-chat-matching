@@ -29,4 +29,13 @@ a {
 .section {
   margin-top: 48px;
 }
-  
+  /* Toss / KakaoPay iframe 보호 */
+iframe {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+body {
+  position: static !important;
+  overflow: visible !important;
+}

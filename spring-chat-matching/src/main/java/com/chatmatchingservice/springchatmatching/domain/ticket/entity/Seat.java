@@ -4,8 +4,11 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor
 @Entity
@@ -36,4 +39,9 @@ public class Seat {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    /** 🔥 좌석 가격 = 섹션에 연결된 티켓 가격 */
+    public Long getPrice() {
+        return section.getTicket().getPrice();
+    }
 }

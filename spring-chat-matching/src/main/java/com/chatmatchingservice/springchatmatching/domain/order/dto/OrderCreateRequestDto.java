@@ -4,5 +4,6 @@ import java.util.List;
 
 public record OrderCreateRequestDto(
         Long eventId,
-        Long reserveUserId
+        Long reserveUserId,
+        List<Long> seatIds
 ) {}

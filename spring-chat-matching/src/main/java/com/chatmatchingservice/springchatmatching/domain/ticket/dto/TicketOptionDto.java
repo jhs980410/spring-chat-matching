@@ -12,7 +12,7 @@ public class TicketOptionDto {
 
     private Long ticketId;
     private String name;          // VIP, R석, S석
-    private int price;
+    private Long price;
     private int remainQuantity;
 
     // 프론트 UX용

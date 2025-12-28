@@ -47,4 +47,10 @@ public class VenueSection {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    /** 🔥 섹션 가격 = 연결된 티켓 가격 */
+    public Long getPrice() {
+        return ticket.getPrice();
+    }
+
 }

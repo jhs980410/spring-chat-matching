@@ -13,17 +13,18 @@ export default function PaymentConfirmPage() {
       const amount = params.get("amount");
 
       if (!paymentKey || !orderId || !amount) {
-        alert("결제 정보가 올바르지 않습니다.");
+        navigate("/payment/fail");
         return;
       }
 
       try {
         await api.post("/payments/confirm", {
           paymentKey,
-          orderId,
+          orderId, // ORD-000001 형태 그대로
           amount: Number(amount),
         });
 
+        // ✅ 승인 성공 후에만 success로 이동
         navigate("/payment/success");
       } catch (e) {
         console.error(e);
@@ -34,5 +35,5 @@ export default function PaymentConfirmPage() {
     confirm();
   }, []);
 
-  return <div>결제 처리 중...</div>;
+  return <div>결제 승인 처리 중...</div>;
 }

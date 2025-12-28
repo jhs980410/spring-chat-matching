@@ -93,7 +93,7 @@ public class TicketOrder {
     /** 🔥 양방향 연관관계 핵심 */
     public void addItem(TicketOrderItem item) {
         this.items.add(item);
-        item.setOrder(this);
+        item.assignOrder(this);
     }
 
     /** 🔥 주문 확정 */
@@ -105,8 +105,9 @@ public class TicketOrder {
         this.orderedAt = LocalDateTime.now();
     }
 
-    public void markPaid() {
+    public void markPaid(Long totalPrice) {
         this.status = TicketOrderStatus.PAID;
+        this.totalPrice =  totalPrice;
         this.paidAt = LocalDateTime.now();
     }
 

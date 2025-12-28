@@ -7,7 +7,7 @@ import java.util.List;
 public record OrderDetailResponseDto(
         Long orderId,
         String status,
-        int totalPrice,
+        Long totalPrice,
         ReserveUserSummaryDto reserveUser,
         List<OrderSeatDetailDto> seats,
         PaymentResponseDto payment

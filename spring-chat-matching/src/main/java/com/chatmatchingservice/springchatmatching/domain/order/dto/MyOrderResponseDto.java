@@ -13,7 +13,7 @@ public class MyOrderResponseDto {
     private Long orderId;
     private TicketOrderStatus orderStatus;
     private LocalDateTime orderedAt;
-    private Integer totalPrice;
+    private Long totalPrice;
 
     private EventInfo event;
     private List<MyOrderItemResponseDto> items = new ArrayList<>();

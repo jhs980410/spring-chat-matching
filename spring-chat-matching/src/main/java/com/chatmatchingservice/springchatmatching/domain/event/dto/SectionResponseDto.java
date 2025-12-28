@@ -7,7 +7,7 @@ public record SectionResponseDto(
         String code,           // 115, FLOOR_A
         String name,           // 115구역
         String grade,          // VIP / R / S
-        int price,             // ticket.price
+        Long price,             // ticket.price
         int totalSeats,
         Long remainSeats,
         List<SeatResponseDto> seats

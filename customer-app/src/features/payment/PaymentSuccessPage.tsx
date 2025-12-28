@@ -16,19 +16,10 @@ export default function PaymentSuccessPage() {
       </p>
 
       <div className={styles.buttons}>
-        <Button
-          size="md"
-          variant="filled"
-          onClick={() => navigate("/me/orders")}
-        >
+        <Button onClick={() => navigate("/me/orders")}>
           예매 내역 보기
         </Button>
-
-        <Button
-          size="md"
-          variant="light"
-          onClick={() => navigate("/")}
-        >
+        <Button variant="light" onClick={() => navigate("/")}>
           홈으로 가기
         </Button>
       </div>

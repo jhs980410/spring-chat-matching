@@ -3,28 +3,38 @@ import styles from "./SeatMap.module.css";
 
 interface Props {
   seats: Seat[];
+  selectedSeatIds: number[];
   onSelectSeat: (seatId: number) => void;
 }
 
-export default function SeatMap({ seats, onSelectSeat }: Props) {
+export default function SeatMap({
+  seats,
+  selectedSeatIds,
+  onSelectSeat,
+}: Props) {
   return (
     <div className={styles.grid}>
       {seats.map((seat) => {
+        const isSelected = selectedSeatIds.includes(seat.seatId);
+
         const seatClass =
-          seat.status === "AVAILABLE"
-            ? styles.available
-            : seat.status === "SOLD"
+          seat.status === "SOLD"
             ? styles.sold
-            : styles.selected;
+            : seat.status === "LOCKED"
+            ? styles.locked
+            : isSelected
+            ? styles.selected
+            : styles.available;
 
         return (
           <div
-            key={seat.id}
+            key={seat.seatId}
             className={`${styles.seat} ${seatClass}`}
             onClick={() =>
-              seat.status !== "SOLD" && onSelectSeat(seat.id)
+              seat.status === "AVAILABLE" &&
+              onSelectSeat(seat.seatId)
             }
-            title={`${seat.row}열 ${seat.number}번`}
+            title={`${seat.rowLabel}열 ${seat.seatNumber}번`}
           />
         );
       })}

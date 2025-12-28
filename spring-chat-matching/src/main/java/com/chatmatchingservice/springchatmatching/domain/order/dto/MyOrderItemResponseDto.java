@@ -7,7 +7,7 @@ public class MyOrderItemResponseDto {
 
     private String ticketName;
     private int quantity;
-    private int unitPrice;
+    private Long unitPrice;
 
     private MyOrderItemResponseDto() {}
 

@@ -4,5 +4,5 @@ public record OrderSeatDetailDto(
         String sectionName,
         String rowLabel,
         int seatNumber,
-        int price
+        Long price
 ) {}

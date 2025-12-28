@@ -1,5 +1,6 @@
 package com.chatmatchingservice.springchatmatching.domain.payment.service;
 
+import com.chatmatchingservice.springchatmatching.domain.payment.dto.TossConfirmResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -7,7 +8,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
-
 @Component
 @RequiredArgsConstructor
 public class TossPaymentClient {
@@ -20,15 +20,13 @@ public class TossPaymentClient {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    /**
-     * 🔥 Toss 결제 승인 (서버 단일 책임)
-     */
-    public void confirm(String paymentKey, String orderId, Long amount) {
-
+    public TossConfirmResponse confirm(
+            String paymentKey,
+            String orderId,
+            Long amount
+    ) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-
-        // 🔐 Basic Auth (secretKey:)
         headers.setBasicAuth(secretKey, "");
 
         Map<String, Object> body = Map.of(
@@ -40,18 +38,18 @@ public class TossPaymentClient {
         HttpEntity<Map<String, Object>> request =
                 new HttpEntity<>(body, headers);
 
-        ResponseEntity<String> response =
+        ResponseEntity<TossConfirmResponse> response =
                 restTemplate.postForEntity(
                         CONFIRM_URL,
                         request,
-                        String.class
+                        TossConfirmResponse.class
                 );
 
-        // ❗ 승인 실패 → 즉시 예외
-        if (!response.getStatusCode().is2xxSuccessful()) {
-            throw new IllegalStateException(
-                    "토스 결제 승인 실패: " + response.getBody()
-            );
+        if (!response.getStatusCode().is2xxSuccessful()
+                || response.getBody() == null) {
+            throw new IllegalStateException("토스 결제 승인 실패");
         }
+
+        return response.getBody();
     }
 }

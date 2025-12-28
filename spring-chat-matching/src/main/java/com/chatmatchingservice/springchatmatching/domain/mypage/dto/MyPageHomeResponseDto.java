@@ -40,7 +40,7 @@ public class MyPageHomeResponseDto {
     public static class RecentOrder {
         private Long orderId;
         private String status;
-        private int totalPrice;
+        private Long totalPrice;
         private LocalDateTime orderedAt;
 
         private EventSummaryDto event;

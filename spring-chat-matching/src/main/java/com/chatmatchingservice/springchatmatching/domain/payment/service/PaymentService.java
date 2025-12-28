@@ -6,16 +6,19 @@ import com.chatmatchingservice.springchatmatching.domain.order.entity.PaymentMet
 import com.chatmatchingservice.springchatmatching.domain.order.repository.PaymentRepository;
 import com.chatmatchingservice.springchatmatching.domain.order.repository.TicketOrderRepository;
 import com.chatmatchingservice.springchatmatching.domain.order.service.SeatLockService;
+import com.chatmatchingservice.springchatmatching.domain.payment.dto.TossConfirmResponse;
 import com.chatmatchingservice.springchatmatching.domain.payment.dto.TossPaymentFailRequest;
 import com.chatmatchingservice.springchatmatching.domain.payment.dto.TossPaymentSuccessRequest;
 import com.chatmatchingservice.springchatmatching.domain.ticket.entity.TicketOrder;
 import com.chatmatchingservice.springchatmatching.domain.ticket.entity.TicketOrderStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class PaymentService {
 
@@ -27,11 +30,17 @@ public class PaymentService {
     /**
      * 결제 승인 (Confirm)
      */
+    @Transactional
     public PaymentResponseDto confirmPayment(
             Long userId,
             TossPaymentSuccessRequest request
     ) {
-        Long orderId = Long.parseLong(request.orderId());
+        // 0️⃣ Toss orderId → 서버 orderId 복원
+        String rawOrderId = request.orderId(); // 예: ORD-000015
+        if (!rawOrderId.startsWith("ORD-")) {
+            throw new IllegalArgumentException("잘못된 orderId");
+        }
+        Long orderId = Long.parseLong(rawOrderId.substring(4));
 
         // 1️⃣ 주문 조회
         TicketOrder order = orderRepository.findById(orderId)
@@ -42,37 +51,55 @@ public class PaymentService {
             throw new IllegalStateException("주문 소유자가 아닙니다.");
         }
 
-        // 🔥 3️⃣ 결제 가능 상태 검증 (ORDERED만 허용)
-        if (order.getStatus() != TicketOrderStatus.ORDERED) {
-            throw new IllegalStateException("결제 가능한 주문 상태가 아닙니다.");
+        // 3️⃣ 중복 confirm 방어 (상태)
+        if (order.getStatus() == TicketOrderStatus.PAID) {
+            throw new IllegalStateException("이미 결제 완료된 주문입니다.");
         }
 
-        // 4️⃣ 금액 검증
-        if (!order.getTotalPrice().equals(request.amount())) {
-            throw new IllegalStateException("결제 금액 불일치");
+        // 4️⃣ 중복 confirm 방어 (paymentKey)
+        if (paymentRepository.existsByPaymentKey(request.paymentKey())) {
+            throw new IllegalStateException("이미 처리된 결제입니다.");
         }
 
         // 5️⃣ Toss 서버 승인
-        tossPaymentClient.confirm(
+        TossConfirmResponse toss = tossPaymentClient.confirm(
                 request.paymentKey(),
                 request.orderId(),
                 request.amount()
         );
 
-        // 6️⃣ 주문 상태 변경
-        order.markPaid();
+        if (!toss.isDone()) {
+            throw new IllegalStateException("결제 승인 실패");
+        }
 
-        // 7️⃣ 결제 기록 생성
+        // 6️⃣ 서버 기준 금액 재계산 (예시)
+        Long serverAmount = order.getTotalPrice(); // ← 좌석 기준 계산
+        Long paidAmount = toss.getTotalAmount();
+
+        log.info("ORDER totalPrice = {}", order.getTotalPrice());
+        log.info("PAID totalAmount = {}", paidAmount);
+        if (paidAmount == null) {
+            throw new IllegalStateException("Toss 결제 금액 누락");
+        }
+
+        if (serverAmount != paidAmount.intValue()) {
+            throw new IllegalStateException("결제 금액 불일치");
+        }
+
+        // 7️⃣ 주문 PAID 처리
+        order.markPaid(serverAmount);
+
+        // 8️⃣ 결제 기록 저장
         Payment payment = Payment.create(
                 order,
                 PaymentMethod.CARD,
-                request.amount(),
+                paidAmount,
                 request.paymentKey()
         );
         payment.markPaid();
         paymentRepository.save(payment);
 
-        // 8️⃣ Redis 좌석 락 해제
+        // 9️⃣ Redis 좌석 락 해제
         seatLockService.unlockSeats(
                 userId,
                 order.getEvent().getId()

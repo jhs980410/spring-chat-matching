@@ -1,16 +1,20 @@
-export type SeatStatus = "AVAILABLE" | "SOLD" | "SELECTED";
+export type SeatStatus = "AVAILABLE" | "LOCKED" | "SOLD";
 
-export interface Section {
-  id: number;
-  code: string;     // 가, 나, 다
-  floor: string;    // 1F, 2F
-  ticketPrice: number;
-}
 
 export interface Seat {
-  id: number;
-  sectionId: number;
-  row: string;      // A, B, C
-  number: number;
+  seatId: number;
+  rowLabel: string;
+  seatNumber: number;
   status: SeatStatus;
+}
+
+export interface Section {
+  sectionId: number;
+  code: string;
+  name: string;
+  grade: string;
+  price: number;
+  totalSeats: number;
+  remainSeats: number;
+  seats: Seat[];
 }

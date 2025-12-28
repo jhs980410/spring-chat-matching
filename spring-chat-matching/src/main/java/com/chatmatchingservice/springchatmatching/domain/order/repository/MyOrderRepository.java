@@ -15,29 +15,31 @@ public interface MyOrderRepository extends JpaRepository<TicketOrder, Long> {
      * 1️⃣ 예매 목록 (Row)
      * ========================= */
     @Query("""
-        select new com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderRow(
-            o.id,
-            o.status,
-            o.orderedAt,
-            o.totalPrice,
+    select new com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderRow(
+        o.id,
+        o.status,
+        o.orderedAt,
+        o.totalPrice,
 
-            e.id,
-            e.title,
-            e.thumbnail,
-            e.venue,
-            e.startAt,
+        e.id,
+        e.title,
+        e.thumbnail,
+        e.venue,
+        e.startAt,
 
-            t.name,
-            i.quantity,
-            i.unitPrice
-        )
-        from TicketOrder o
-        join o.event e
-        join o.items i
-        join i.ticket t
-        where o.user.id = :userId
-        order by o.orderedAt desc
-    """)
+        t.name,
+        i.quantity,
+        i.unitPrice
+    )
+    from TicketOrder o
+    join o.event e
+    join o.items i
+    join i.seat s
+    join s.section sec
+    join sec.ticket t
+    where o.user.id = :userId
+    order by o.orderedAt desc
+""")
     List<MyOrderRow> findMyOrders(@Param("userId") Long userId);
 
 
@@ -45,32 +47,35 @@ public interface MyOrderRepository extends JpaRepository<TicketOrder, Long> {
      * 2️⃣ 주문 상세 (Row 여러 줄)
      * ========================= */
     @Query("""
-        select new com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderRow(
-            o.id,
-            o.status,
-            o.orderedAt,
-            o.totalPrice,
+    select new com.chatmatchingservice.springchatmatching.domain.order.dto.MyOrderRow(
+        o.id,
+        o.status,
+        o.orderedAt,
+        o.totalPrice,
 
-            e.id,
-            e.title,
-            e.thumbnail,
-            e.venue,
-            e.startAt,
+        e.id,
+        e.title,
+        e.thumbnail,
+        e.venue,
+        e.startAt,
 
-            t.name,
-            i.quantity,
-            i.unitPrice
-        )
-        from TicketOrder o
-        join o.event e
-        join o.items i
-        join i.ticket t
-        where o.id = :orderId
-          and o.user.id = :userId
-    """)
-    List<MyOrderRow> findOrderDetail(@Param("orderId") Long orderId,
-                                     @Param("userId") Long userId);
-
+        t.name,
+        i.quantity,
+        i.unitPrice
+    )
+    from TicketOrder o
+    join o.event e
+    join o.items i
+    join i.seat s
+    join s.section sec
+    join sec.ticket t
+    where o.id = :orderId
+      and o.user.id = :userId
+""")
+    List<MyOrderRow> findOrderDetail(
+            @Param("orderId") Long orderId,
+            @Param("userId") Long userId
+    );
 
     /* =========================
      * 3️⃣ 홈 - 상태별 카운트
