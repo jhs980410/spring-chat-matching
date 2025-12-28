@@ -6,11 +6,7 @@ import com.chatmatchingservice.springchatmatching.domain.payment.dto.TossPayment
 import com.chatmatchingservice.springchatmatching.domain.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/payments")
@@ -18,15 +14,20 @@ public class TossPaymentController {
 
     private final PaymentService paymentService;
 
-    @PostMapping("/success")
-    public PaymentResponseDto success(
+    /**
+     * Toss 결제 승인 (confirm)
+     */
+    @PostMapping("/confirm")
+    public PaymentResponseDto confirm(
             @RequestBody TossPaymentSuccessRequest request,
             Authentication auth
     ) {
         Long userId = (Long) auth.getPrincipal();
         return paymentService.confirmPayment(userId, request);
     }
-
+    /**
+     * Toss 결제 실패
+     */
     @PostMapping("/fail")
     public void fail(
             @RequestBody TossPaymentFailRequest request,
@@ -36,3 +37,4 @@ public class TossPaymentController {
         paymentService.failPayment(userId, request);
     }
 }
+

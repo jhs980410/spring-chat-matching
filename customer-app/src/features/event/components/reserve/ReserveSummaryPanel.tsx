@@ -1,39 +1,57 @@
 import type { Seat } from "./types";
 import styles from "./ReserveSummaryPanel.module.css";
 import { getTossPayments } from "../../../payment/toss";
+import api from "../../../../api/axios";
 
 interface Props {
   selectedSeats: Seat[];
   price: number;
+  eventId: number;
 }
 
 export default function ReserveSummaryPanel({
   selectedSeats,
   price,
+  eventId,
 }: Props) {
   const total = selectedSeats.length * price;
 
-  const handlePay = async () => {
-    if (selectedSeats.length === 0) {
-      alert("좌석을 선택해주세요.");
-      return;
-    }
 
-    // ⚠️ 실제로는 여기서
-    // 1) payment-ready API 호출
-    // 2) orderId 받아와야 함
-    const orderId = `ORDER_${Date.now()}`;
+const handlePay = async () => {
+  if (selectedSeats.length === 0) {
+    alert("좌석을 선택해주세요.");
+    return;
+  }
 
-    const tossPayments = await getTossPayments();
+  // 1️⃣ 빈 주문 생성 (PENDING)
+  const orderRes = await api.post("/orders", { eventId });
+  const { orderId } = orderRes.data;
 
-    await tossPayments.requestPayment("CARD", {
-      amount: total,
-      orderId,
-      orderName: `좌석 ${selectedSeats.length}매`,
-      successUrl: `${window.location.origin}/payment/success`,
-      failUrl: `${window.location.origin}/payment/fail`,
-    });
-  };
+  // 2️⃣ 좌석 락 (orderId 기준)
+await api.post(`/orders/${orderId}/reserve`, {
+  eventId,
+  seatIds: selectedSeats.map((s) => s.id),
+});
+
+  // 3️⃣ Toss 결제창
+  const tossPayments = await getTossPayments();
+  const payment = tossPayments.payment({
+    customerKey: "user_" + orderId,
+  });
+
+  await payment.requestPayment({
+    method: "CARD",
+    amount: {
+      currency: "KRW",
+      value: total,
+    },
+    orderId: String(orderId),
+    orderName: `좌석 ${selectedSeats.length}매`,
+    customerName: "테스트고객",
+    successUrl: `${window.location.origin}/payment/success`,
+    failUrl: `${window.location.origin}/payment/fail`,
+  });
+};
 
   return (
     <div className={styles.panel}>

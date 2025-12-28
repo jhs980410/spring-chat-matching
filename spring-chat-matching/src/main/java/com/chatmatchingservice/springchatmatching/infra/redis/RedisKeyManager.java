@@ -53,21 +53,21 @@ public class RedisKeyManager {
     }
 
 
-    // ===================== 🎟️ 좌석 예매 =====================
 
-    /** 좌석 락 */
+// ===================== 🎟️ 좌석 예매 (ORDER 기준) =====================
+
+    /** 좌석 락 (value = orderId, TTL 필수) */
     public static String seatLock(Long eventId, Long seatId) {
         return "seat:lock:event:" + eventId + ":seat:" + seatId;
     }
 
-    /** 유저가 잡은 좌석 목록 */
-    public static String userLockedSeats(Long userId, Long eventId) {
-        return "user:" + userId + ":lockedSeats:event:" + eventId;
+    /** 주문이 점유한 좌석 목록 */
+    public static String orderLockedSeats(Long orderId, Long eventId) {
+        return "order:" + orderId + ":event:" + eventId + ":seats";
     }
 
-    /** 예매 진행 상태 */
-    public static String reservationStatus(Long eventId, Long userId) {
-        return "reservation:event:" + eventId + ":user:" + userId;
+    /** 주문 단위 예매 상태 */
+    public static String reservationStatus(Long eventId, Long orderId) {
+        return "reservation:event:" + eventId + ":order:" + orderId;
     }
-
 }

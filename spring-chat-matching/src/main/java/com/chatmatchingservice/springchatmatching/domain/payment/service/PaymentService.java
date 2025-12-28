@@ -9,6 +9,7 @@ import com.chatmatchingservice.springchatmatching.domain.order.service.SeatLockS
 import com.chatmatchingservice.springchatmatching.domain.payment.dto.TossPaymentFailRequest;
 import com.chatmatchingservice.springchatmatching.domain.payment.dto.TossPaymentSuccessRequest;
 import com.chatmatchingservice.springchatmatching.domain.ticket.entity.TicketOrder;
+import com.chatmatchingservice.springchatmatching.domain.ticket.entity.TicketOrderStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,29 +24,45 @@ public class PaymentService {
     private final SeatLockService seatLockService;
     private final TossPaymentClient tossPaymentClient;
 
+    /**
+     * 결제 승인 (Confirm)
+     */
     public PaymentResponseDto confirmPayment(
             Long userId,
             TossPaymentSuccessRequest request
     ) {
-        // 1 ️order 조회
-        TicketOrder order = orderRepository.findByOrderId(request.orderId())
+        Long orderId = Long.parseLong(request.orderId());
+
+        // 1️⃣ 주문 조회
+        TicketOrder order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("주문 없음"));
 
-        // 2️ 금액 검증 (위조 방지)
+        // 2️⃣ 주문 소유자 검증
+        if (!order.getUser().getId().equals(userId)) {
+            throw new IllegalStateException("주문 소유자가 아닙니다.");
+        }
+
+        // 🔥 3️⃣ 결제 가능 상태 검증 (ORDERED만 허용)
+        if (order.getStatus() != TicketOrderStatus.ORDERED) {
+            throw new IllegalStateException("결제 가능한 주문 상태가 아닙니다.");
+        }
+
+        // 4️⃣ 금액 검증
         if (!order.getTotalPrice().equals(request.amount())) {
             throw new IllegalStateException("결제 금액 불일치");
         }
 
-        // 3️ Toss 서버 승인 (중요)
+        // 5️⃣ Toss 서버 승인
         tossPaymentClient.confirm(
                 request.paymentKey(),
                 request.orderId(),
                 request.amount()
         );
 
-        // 4️⃣ DB 상태 변경
+        // 6️⃣ 주문 상태 변경
         order.markPaid();
 
+        // 7️⃣ 결제 기록 생성
         Payment payment = Payment.create(
                 order,
                 PaymentMethod.CARD,
@@ -53,11 +70,13 @@ public class PaymentService {
                 request.paymentKey()
         );
         payment.markPaid();
-
         paymentRepository.save(payment);
 
-        // 5️⃣ Redis 좌석 락 해제
-        seatLockService.unlockSeats(userId, order.getEvent().getId());
+        // 8️⃣ Redis 좌석 락 해제
+        seatLockService.unlockSeats(
+                userId,
+                order.getEvent().getId()
+        );
 
         return new PaymentResponseDto(
                 payment.getId(),
@@ -68,17 +87,31 @@ public class PaymentService {
         );
     }
 
+    /**
+     * 결제 실패 처리
+     */
     public void failPayment(
             Long userId,
             TossPaymentFailRequest request
     ) {
 
-        TicketOrder order =
-                orderRepository.findByOrderId(request.orderId())
-                        .orElse(null);
+        Long orderId = Long.parseLong(request.orderId());
 
-        if (order != null) {
-            seatLockService.unlockSeats(userId, order.getEvent().getId());
+        TicketOrder order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문 없음"));
+
+        // 주문 소유자 검증
+        if (!order.getUser().getId().equals(userId)) {
+            throw new IllegalStateException("주문 소유자가 아닙니다.");
         }
+
+        // 좌석 락 해제
+        seatLockService.unlockSeats(
+                userId,
+                order.getEvent().getId()
+        );
+
+        // ❗ 상태는 CANCEL이 아니라 PENDING 유지 (또는 FAILED 컬럼 도입)
+        // 필요하면 로그만 남김
     }
 }

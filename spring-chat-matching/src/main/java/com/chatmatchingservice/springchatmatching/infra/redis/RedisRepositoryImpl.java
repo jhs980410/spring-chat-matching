@@ -379,18 +379,22 @@ public class RedisRepositoryImpl implements RedisRepository {
         return null;
     }
 
-
-    // ================================
-// 🎟️ 좌석 예매 (Seat Lock)
+// ================================
+// 🎟️ 좌석 예매 (Seat Lock) - ORDER 기준
 // ================================
 
     @Override
-    public boolean tryLockSeat(Long eventId, Long seatId, Long userId, long ttlSeconds) {
+    public boolean tryLockSeat(
+            Long eventId,
+            Long seatId,
+            Long orderId,
+            long ttlSeconds
+    ) {
         String key = RedisKeyManager.seatLock(eventId, seatId);
 
         Boolean success = redisStringTemplate.opsForValue().setIfAbsent(
                 key,
-                userId.toString(),
+                orderId.toString(),
                 ttlSeconds,
                 TimeUnit.SECONDS
         );
@@ -406,17 +410,17 @@ public class RedisRepositoryImpl implements RedisRepository {
     }
 
     @Override
-    public void addUserLockedSeat(Long userId, Long eventId, Long seatId) {
+    public void addOrderLockedSeat(Long orderId, Long eventId, Long seatId) {
         redisStringTemplate.opsForSet().add(
-                RedisKeyManager.userLockedSeats(userId, eventId),
+                RedisKeyManager.orderLockedSeats(orderId, eventId),
                 seatId.toString()
         );
     }
 
     @Override
-    public Set<Long> getUserLockedSeats(Long userId, Long eventId) {
+    public Set<Long> getOrderLockedSeats(Long orderId, Long eventId) {
         Set<String> values = redisStringTemplate.opsForSet()
-                .members(RedisKeyManager.userLockedSeats(userId, eventId));
+                .members(RedisKeyManager.orderLockedSeats(orderId, eventId));
 
         if (values == null) return Set.of();
 
@@ -426,38 +430,35 @@ public class RedisRepositoryImpl implements RedisRepository {
     }
 
     @Override
-    public void removeUserLockedSeat(Long userId, Long eventId, Long seatId) {
-        redisStringTemplate.opsForSet().remove(
-                RedisKeyManager.userLockedSeats(userId, eventId),
-                seatId.toString()
+    public void clearOrderLockedSeats(Long orderId, Long eventId) {
+        redisStringTemplate.delete(
+                RedisKeyManager.orderLockedSeats(orderId, eventId)
         );
     }
 
     @Override
-    public void clearUserLockedSeats(Long userId, Long eventId) {
-        redisStringTemplate.delete(
-                RedisKeyManager.userLockedSeats(userId, eventId)
-        );
-    }
-    @Override
-    public void setReservationStatus(Long eventId, Long userId, String status) {
+    public void setReservationStatus(
+            Long eventId,
+            Long orderId,
+            String status
+    ) {
         redisStringTemplate.opsForValue().set(
-                RedisKeyManager.reservationStatus(eventId, userId),
+                RedisKeyManager.reservationStatus(eventId, orderId),
                 status
         );
     }
 
     @Override
-    public String getReservationStatus(Long eventId, Long userId) {
+    public String getReservationStatus(Long eventId, Long orderId) {
         return redisStringTemplate.opsForValue().get(
-                RedisKeyManager.reservationStatus(eventId, userId)
+                RedisKeyManager.reservationStatus(eventId, orderId)
         );
     }
 
     @Override
-    public void clearReservationStatus(Long eventId, Long userId) {
+    public void clearReservationStatus(Long eventId, Long orderId) {
         redisStringTemplate.delete(
-                RedisKeyManager.reservationStatus(eventId, userId)
+                RedisKeyManager.reservationStatus(eventId, orderId)
         );
     }
 
@@ -469,7 +470,6 @@ public class RedisRepositoryImpl implements RedisRepository {
                 )
         );
     }
-
 
 
 

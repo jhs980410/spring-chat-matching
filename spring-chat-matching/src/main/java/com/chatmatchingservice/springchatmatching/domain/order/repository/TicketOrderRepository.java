@@ -12,5 +12,5 @@ public interface TicketOrderRepository extends JpaRepository<TicketOrder, Long> 
 
     List<TicketOrder> findByUserIdOrderByOrderedAtDesc(Long userId);
 
-    Optional<TicketOrder> findByOrderId(String id);
+    Optional<TicketOrder> findById(Long id);
 }

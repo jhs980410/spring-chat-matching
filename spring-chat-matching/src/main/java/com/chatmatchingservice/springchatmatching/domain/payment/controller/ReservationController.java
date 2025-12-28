@@ -1,34 +1,46 @@
 package com.chatmatchingservice.springchatmatching.domain.payment.controller;
 
-import com.chatmatchingservice.springchatmatching.domain.event.dto.SectionResponseDto;
+import com.chatmatchingservice.springchatmatching.domain.order.dto.OrderCreateRequestDto;
+import com.chatmatchingservice.springchatmatching.domain.order.dto.OrderCreateResponseDto;
 import com.chatmatchingservice.springchatmatching.domain.payment.service.ReservationService;
-import com.chatmatchingservice.springchatmatching.domain.ticket.service.SeatQueryService;
+import com.chatmatchingservice.springchatmatching.domain.ticket.dto.SeatReserveRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/events")
+@RequestMapping("/api/orders")
 public class ReservationController {
 
     private final ReservationService reservationService;
-    private final SeatQueryService seatQueryService;
 
-    @GetMapping("/{eventId}/seats")
-    public List<SectionResponseDto> seats(@PathVariable Long eventId) {
-        return seatQueryService.getSectionsWithSeats(eventId);
-    }
 
-    @PostMapping("/{eventId}/reserve")
-    public void reserve(
-            @PathVariable Long eventId,
-            @RequestBody List<Long> seatIds,
+    /**
+     * 주문 생성 (PENDING)
+     */
+    @PostMapping
+    public OrderCreateResponseDto createOrder(
+            @RequestBody OrderCreateRequestDto request,
             Authentication auth
     ) {
         Long userId = (Long) auth.getPrincipal();
-        reservationService.prepareReservation(userId, eventId, seatIds);
+        return reservationService.createOrder(userId, request);
+    }
+
+    /**
+     * 좌석 락 (orderId 기준)
+     */
+    @PostMapping("/{orderId}/reserve")
+    public void reserve(
+            @PathVariable Long orderId,
+            @RequestBody SeatReserveRequest request
+    ) {
+        reservationService.prepareReservation(
+                orderId,
+                request.eventId(),
+                request.seatIds()
+        );
     }
 }

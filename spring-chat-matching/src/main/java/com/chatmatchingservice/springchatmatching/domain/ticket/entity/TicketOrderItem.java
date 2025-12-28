@@ -3,6 +3,10 @@ package com.chatmatchingservice.springchatmatching.domain.ticket.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+
+import jakarta.persistence.*;
+import lombok.*;
+
 @Entity
 @Table(name = "ticket_order_item")
 @Getter

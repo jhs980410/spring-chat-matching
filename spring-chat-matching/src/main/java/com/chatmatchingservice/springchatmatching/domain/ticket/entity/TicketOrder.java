@@ -13,8 +13,6 @@ import java.util.List;
 @Table(name = "ticket_order")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
-@Builder
 public class TicketOrder {
 
     @Id
@@ -38,10 +36,9 @@ public class TicketOrder {
     private TicketOrderStatus status;
 
     @Column(name = "total_price", nullable = false)
-    private Long totalPrice;
+    private Long totalPrice = 0L;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<TicketOrderItem> items = new ArrayList<>();
 
     @Column(name = "ordered_at")
@@ -65,7 +62,7 @@ public class TicketOrder {
     }
 
     /* =========================
-       🔥 도메인 메서드
+       🔥 핵심 도메인 메서드
        ========================= */
 
     public static TicketOrder create(
@@ -81,13 +78,17 @@ public class TicketOrder {
         return order;
     }
 
+    /** 🔥 양방향 연관관계 핵심 */
     public void addItem(TicketOrderItem item) {
         this.items.add(item);
         item.setOrder(this);
     }
 
-    public void complete(Long totalPrice) {
-        this.totalPrice = totalPrice;
+    /** 🔥 주문 확정 */
+    public void confirmOrder() {
+        this.totalPrice = items.stream()
+                .mapToLong(TicketOrderItem::getPrice)
+                .sum();
         this.status = TicketOrderStatus.ORDERED;
         this.orderedAt = LocalDateTime.now();
     }
@@ -100,5 +101,9 @@ public class TicketOrder {
     public void cancel() {
         this.status = TicketOrderStatus.CANCELLED;
         this.cancelledAt = LocalDateTime.now();
+    }
+
+    public boolean isPaid() {
+        return this.status == TicketOrderStatus.PAID;
     }
 }

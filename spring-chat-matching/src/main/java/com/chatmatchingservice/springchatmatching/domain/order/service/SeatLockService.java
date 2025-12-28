@@ -8,17 +8,19 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
 @Service
 @RequiredArgsConstructor
 public class SeatLockService {
-    //좌석 락 / 해제 (WRITE, Redis)
-    private static final long LOCK_TTL_SECONDS = 500;
+
+    private static final long LOCK_TTL_SECONDS = 300;
 
     private final RedisRepository redisRepository;
 
+    /**
+     * 좌석 락 (order 기준)
+     */
     public SeatLockResultDto lockSeats(
-            Long userId,
+            Long orderId,
             Long eventId,
             List<Long> seatIds
     ) {
@@ -28,12 +30,15 @@ public class SeatLockService {
 
         for (Long seatId : seatIds) {
             boolean success = redisRepository.tryLockSeat(
-                    eventId, seatId, userId, LOCK_TTL_SECONDS
+                    eventId,
+                    seatId,
+                    orderId,
+                    LOCK_TTL_SECONDS
             );
 
             if (success) {
                 locked.add(seatId);
-                redisRepository.addUserLockedSeat(userId, eventId, seatId);
+                redisRepository.addOrderLockedSeat(orderId, eventId, seatId);
             } else {
                 failed.add(seatId);
             }
@@ -43,7 +48,7 @@ public class SeatLockService {
             locked.forEach(seatId ->
                     redisRepository.unlockSeat(eventId, seatId)
             );
-            redisRepository.clearUserLockedSeats(userId, eventId);
+            redisRepository.clearOrderLockedSeats(orderId, eventId);
 
             return new SeatLockResultDto(
                     false,
@@ -53,7 +58,7 @@ public class SeatLockService {
             );
         }
 
-        redisRepository.setReservationStatus(eventId, userId, "LOCKED");
+        redisRepository.setReservationStatus(eventId, orderId, "LOCKED");
 
         return new SeatLockResultDto(
                 true,
@@ -63,19 +68,31 @@ public class SeatLockService {
         );
     }
 
-    public void unlockSeats(Long userId, Long eventId) {
+    /**
+     * 좌석 락 해제 (order 기준)
+     */
+    public void unlockSeats(Long orderId, Long eventId) {
+
         Set<Long> seats =
-                redisRepository.getUserLockedSeats(userId, eventId);
+                redisRepository.getOrderLockedSeats(orderId, eventId);
 
         for (Long seatId : seats) {
             redisRepository.unlockSeat(eventId, seatId);
         }
 
-        redisRepository.clearUserLockedSeats(userId, eventId);
-        redisRepository.clearReservationStatus(eventId, userId);
+        redisRepository.clearOrderLockedSeats(orderId, eventId);
+        redisRepository.clearReservationStatus(eventId, orderId);
     }
 
-    public Set<Long> getUserLockedSeats(Long userId, Long eventId) {
-        return redisRepository.getUserLockedSeats(userId, eventId);
+    public Set<Long> getOrderLockedSeats(Long orderId, Long eventId) {
+        return redisRepository.getOrderLockedSeats(orderId, eventId);
+    }
+
+    public void markInProgress(Long eventId, Long orderId) {
+        redisRepository.setReservationStatus(eventId, orderId, "IN_PROGRESS");
+    }
+
+    public String getReservationStatus(Long eventId, Long orderId) {
+        return redisRepository.getReservationStatus(eventId, orderId);
     }
 }
