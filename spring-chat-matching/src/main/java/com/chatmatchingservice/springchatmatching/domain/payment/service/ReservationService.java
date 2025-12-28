@@ -33,24 +33,19 @@ public class ReservationService {
             Long userId,
             OrderCreateRequestDto request
     ) {
-        // 유저 조회
         AppUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("유저 없음"));
 
-        // 이벤트 조회
         Event event = eventRepository.findById(request.eventId())
                 .orElseThrow(() -> new IllegalArgumentException("이벤트 없음"));
 
-        // 예매자 조회
-        ReserveUser reserveUser = reserveUserRepository.findById(request.reserveUserId())
-                .orElseThrow(() -> new IllegalArgumentException("예매자 없음"));
-
-        // 주문 생성 (PENDING)
-        TicketOrder order = TicketOrder.create(user, reserveUser, event);
+        // 🔥 reserveUser 조회 제거
+        TicketOrder order = TicketOrder.create(user, event);
         orderRepository.save(order);
 
         return new OrderCreateResponseDto(order.getId());
     }
+
 
     public void prepareReservation(
             Long orderId,

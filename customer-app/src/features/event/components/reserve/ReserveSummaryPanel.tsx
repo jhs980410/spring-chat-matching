@@ -1,22 +1,23 @@
 import type { Seat } from "./types";
 import styles from "./ReserveSummaryPanel.module.css";
 import { getTossPayments } from "../../../payment/toss";
+import { useParams } from "react-router-dom";
 import api from "../../../../api/axios";
 
 interface Props {
   selectedSeats: Seat[];
   price: number;
-  eventId: number;
 }
 
 export default function ReserveSummaryPanel({
   selectedSeats,
-  price,
-  eventId,
+  price
+
 }: Props) {
   const total = selectedSeats.length * price;
 
-
+const { id } = useParams<{ id: string }>();
+const eventId = Number(id);
 const handlePay = async () => {
   if (selectedSeats.length === 0) {
     alert("좌석을 선택해주세요.");
@@ -24,9 +25,11 @@ const handlePay = async () => {
   }
 
   // 1️⃣ 빈 주문 생성 (PENDING)
-  const orderRes = await api.post("/orders", { eventId });
+  const orderRes = await api.post("/orders", {
+  eventId
+});
   const { orderId } = orderRes.data;
-
+const tossOrderId = `order_${orderId}_${Date.now()}`;
   // 2️⃣ 좌석 락 (orderId 기준)
 await api.post(`/orders/${orderId}/reserve`, {
   eventId,
@@ -45,7 +48,7 @@ await api.post(`/orders/${orderId}/reserve`, {
       currency: "KRW",
       value: total,
     },
-    orderId: String(orderId),
+    orderId: tossOrderId,
     orderName: `좌석 ${selectedSeats.length}매`,
     customerName: "테스트고객",
     successUrl: `${window.location.origin}/payment/success`,

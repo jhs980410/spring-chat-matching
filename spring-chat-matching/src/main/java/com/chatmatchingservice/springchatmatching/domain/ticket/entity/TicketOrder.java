@@ -24,7 +24,7 @@ public class TicketOrder {
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reserve_user_id", nullable = false)
+    @JoinColumn(name = "reserve_user_id", nullable = true) // 🔥 반드시 true
     private ReserveUser reserveUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -76,6 +76,18 @@ public class TicketOrder {
         order.event = event;
         order.status = TicketOrderStatus.PENDING;
         return order;
+    }
+
+    public static TicketOrder create(AppUser user, Event event) {
+        TicketOrder order = new TicketOrder();
+        order.user = user;
+        order.event = event;
+        order.status = TicketOrderStatus.PENDING;
+        return order;
+    }
+    //결제성공시//
+    public void assignReserveUser(ReserveUser reserveUser) {
+        this.reserveUser = reserveUser;
     }
 
     /** 🔥 양방향 연관관계 핵심 */

@@ -26,6 +26,9 @@ public class ReservationController {
             Authentication auth
     ) {
         Long userId = (Long) auth.getPrincipal();
+        System.out.println("userid는 ? =" + userId);
+        System.out.println("eventId는?=" + request.eventId());
+
         return reservationService.createOrder(userId, request);
     }
 
