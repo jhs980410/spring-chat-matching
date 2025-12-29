@@ -19,29 +19,34 @@ export default function ReservePage() {
 
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([]);
 
-  // seatId → 라벨 매핑 (요약 패널용)
+  // ✅ seatId → 라벨 매핑 (요약 패널용)
   const [seatLabelMap, setSeatLabelMap] = useState<
-    Record<number, { row: string; number: number }>
+    Record<number, { rowLabel: string; seatNumber: number }>
   >({});
 
   /** 🔹 좌석 데이터 로드 */
   useEffect(() => {
     api.get(`/events/${eventId}/seats`).then((res) => {
-      setSections(res.data);
+      const sectionsData: Section[] = res.data;
+      setSections(sectionsData);
 
-      // 좌석 라벨 맵 생성
-      const map: Record<number, { row: string; number: number }> = {};
-      res.data.forEach((section: Section) => {
+      // ✅ 좌석 라벨 맵 생성 (정확한 필드명 사용)
+      const map: Record<number, { rowLabel: string; seatNumber: number }> = {};
+      sectionsData.forEach((section) => {
         section.seats.forEach((seat: Seat) => {
-          map[seat.id] = { row: seat.row, number: seat.number };
+          map[seat.seatId] = {
+            rowLabel: seat.rowLabel,
+            seatNumber: seat.seatNumber,
+          };
         });
       });
       setSeatLabelMap(map);
     });
   }, [eventId]);
 
+  // ✅ sectionId 기준으로 선택 섹션 찾기
   const selectedSection = sections.find(
-    (s) => s.id === selectedSectionId
+    (s) => s.sectionId === selectedSectionId
   );
 
   /** 🔹 좌석 선택 / 해제 */
@@ -63,12 +68,13 @@ export default function ReservePage() {
       <div className={styles.left}>
         <div className={styles.stage}>STAGE</div>
 
+        {/* ✅ SectionMap 필드명 정합 */}
         <SectionMap
           sections={sections}
           selectedSectionId={selectedSectionId}
-          onSelect={(id) => {
-            setSelectedSectionId(id);
-            setSelectedSeatIds([]); // 🔥 구역 변경 시 초기화
+          onSelect={(sectionId) => {
+            setSelectedSectionId(sectionId);
+            setSelectedSeatIds([]); // 🔥 구역 변경 시 좌석 초기화
           }}
         />
 
@@ -85,7 +91,7 @@ export default function ReservePage() {
         <ReserveSummaryPanel
           selectedSeatIds={selectedSeatIds}
           seatLabelMap={seatLabelMap}
-          price={selectedSection?.ticketPrice ?? 0}
+          price={selectedSection?.price ?? 0} // ✅ ticketPrice ❌ → price ⭕
         />
       </div>
     </div>

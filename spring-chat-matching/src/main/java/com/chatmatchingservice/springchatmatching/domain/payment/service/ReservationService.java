@@ -60,7 +60,7 @@ public class ReservationService {
 
         for (Seat seat : seats) {
             TicketOrderItem item =
-                    TicketOrderItem.create(seat, seat.getPrice());
+                    TicketOrderItem.create(seat);
             order.addItem(item);
         }
 

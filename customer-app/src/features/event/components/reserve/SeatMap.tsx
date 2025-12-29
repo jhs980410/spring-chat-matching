@@ -30,10 +30,10 @@ export default function SeatMap({
           <div
             key={seat.seatId}
             className={`${styles.seat} ${seatClass}`}
-            onClick={() =>
-              seat.status === "AVAILABLE" &&
-              onSelectSeat(seat.seatId)
-            }
+            onClick={() => {
+              if (seat.status !== "AVAILABLE") return;
+              onSelectSeat(seat.seatId);
+            }}
             title={`${seat.rowLabel}열 ${seat.seatNumber}번`}
           />
         );

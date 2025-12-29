@@ -2,7 +2,6 @@ package com.chatmatchingservice.springchatmatching.domain.ticket.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
 @Entity
 @Table(name = "ticket_order_item")
 @Getter
@@ -14,7 +13,7 @@ public class TicketOrderItem {
     private Long id;
 
     /* =========================
-       🔥 연관관계
+       연관관계
        ========================= */
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -22,11 +21,15 @@ public class TicketOrderItem {
     private TicketOrder order;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ticket_id", nullable = false)
+    private Ticket ticket;   // ✅ 반드시 Ticket
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_id", nullable = false)
     private Seat seat;
 
     /* =========================
-       🔥 가격 정보
+       가격 정보
        ========================= */
 
     @Column(nullable = false)
@@ -39,23 +42,20 @@ public class TicketOrderItem {
     private Long price;
 
     /* =========================
-       🔥 생성 메서드
+       생성 메서드
        ========================= */
-    public static TicketOrderItem create(
-            Seat seat,
-            Long unitPrice
-    ) {
+    public static TicketOrderItem create(Seat seat) {
+        Ticket ticket = seat.getSection().getTicket();
+
         TicketOrderItem item = new TicketOrderItem();
         item.seat = seat;
-        item.quantity = 1;          // 좌석 단위 예매 → 항상 1
-        item.unitPrice = unitPrice;
-        item.price = unitPrice;
+        item.ticket = ticket;
+        item.quantity = 1;
+        item.unitPrice = ticket.getPrice();
+        item.price = item.unitPrice;
         return item;
     }
 
-    /* =========================
-       🔥 연관관계 설정 (Order 전용)
-       ========================= */
     void assignOrder(TicketOrder order) {
         this.order = order;
     }

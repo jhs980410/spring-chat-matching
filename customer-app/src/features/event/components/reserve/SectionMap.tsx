@@ -14,19 +14,21 @@ export default function SectionMap({
 }: Props) {
   return (
     <div className={styles.wrapper}>
-     {sections.map((s) => {
-  const isSelected = selectedSectionId === s.id;
+      {sections.map((s) => {
+        const isSelected = selectedSectionId === s.sectionId;
 
-  return (
-    <button
-      key={s.id}
-      onClick={() => onSelect(s.id)}
-      className={`${styles.sectionButton} ${isSelected ? styles.selected : ""}`}
-    >
-      {s.code}구역 ({s.remainSeatCount})
-    </button>
-  );
-})}
+        return (
+          <button
+            key={s.sectionId}
+            onClick={() => onSelect(s.sectionId)}
+            className={`${styles.sectionButton} ${
+              isSelected ? styles.selected : ""
+            }`}
+          >
+            {s.code}구역 ({s.remainSeats})
+          </button>
+        );
+      })}
     </div>
   );
 }

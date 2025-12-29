@@ -101,7 +101,7 @@ public class PaymentService {
 
         // 9️⃣ Redis 좌석 락 해제
         seatLockService.unlockSeats(
-                userId,
+                order.getId(),
                 order.getEvent().getId()
         );
 
@@ -134,7 +134,7 @@ public class PaymentService {
 
         // 좌석 락 해제
         seatLockService.unlockSeats(
-                userId,
+                order.getId(),
                 order.getEvent().getId()
         );
 
