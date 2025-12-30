@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../../../api/axios";
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
+   ORDERED: { label: "주문 완료", color: "gray" },
   PAID: { label: "예매 완료", color: "blue" },
   CANCELLED: { label: "취소", color: "red" },
   REFUNDED: { label: "환불", color: "orange" },

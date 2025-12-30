@@ -1,6 +1,6 @@
 // features/event/components/TicketOptionList.tsx
 import { Badge, Card, Group, Stack, Text } from "@mantine/core";
-import type { TicketOption } from "../../types/eventTypes";
+import type { TicketOption } from "../../pages/types/eventTypes";
 
 interface Props {
   tickets: TicketOption[];

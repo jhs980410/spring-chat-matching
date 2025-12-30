@@ -48,6 +48,7 @@ const STATUS_MAP: Record<
   OrderStatus,
   { label: string; color: string }
 > = {
+   ORDERED: { label: "주문 완료", color: "gray" },
   PAID: { label: "예매 완료", color: "blue" },
   CANCELLED: { label: "취소", color: "red" },
   REFUNDED: { label: "환불", color: "orange" },

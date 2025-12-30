@@ -6,6 +6,7 @@ import com.chatmatchingservice.springchatmatching.global.auth.ChatPrincipal;
 
 import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import com.chatmatchingservice.springchatmatching.infra.redis.WSMessage;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -16,7 +17,16 @@ import org.springframework.stereotype.Controller;
 
 import java.time.Instant;
 import java.util.Map;
+@Tag(
+        name = "Chat WebSocket (STOMP)",
+        description = """
+    실시간 상담 채팅 WebSocket API
 
+    - STOMP 기반 실시간 메시지 송수신
+    - 세션 기반 인증(ChatPrincipal) 복원
+    - Redis Pub/Sub을 통한 메시지 브로드캐스트
+    """
+)
 @Controller
 @RequiredArgsConstructor
 @Slf4j

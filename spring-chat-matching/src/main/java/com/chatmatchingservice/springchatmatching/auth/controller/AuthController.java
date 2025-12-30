@@ -7,12 +7,25 @@ import com.chatmatchingservice.springchatmatching.domain.user.dto.UserLoginReque
 import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselorSignupRequest;
 import com.chatmatchingservice.springchatmatching.domain.counselor.dto.CounselorLoginRequest;
 import com.chatmatchingservice.springchatmatching.global.auth.jwt.CookieUtil; // 추가
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+@Tag(
+        name = "AuthController",
+        description = """
+    인증 및 토큰 관리 API
+
+    - 사용자 / 상담사 회원가입 및 로그인
+    - JWT 기반 인증 (HttpOnly Cookie)
+    - AccessToken 재발급 (Refresh Token)
+    - 로그아웃 처리
+    """
+)
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -26,6 +39,7 @@ public class AuthController {
     // ==============================
     // USER SIGNUP
     // ==============================
+    @Operation(summary = "사용자 회원가입")
     @PostMapping("/user/signup")
     public ResponseEntity<Void> userSignup(@RequestBody UserSignupRequest req) {
         log.info("[API] User Signup: {}", req.email());
@@ -37,6 +51,7 @@ public class AuthController {
     // ==============================
     // USER LOGIN
     // ==============================
+    @Operation(summary = "사용자 로그인")
     @PostMapping("/user/login")
     public ResponseEntity<AuthResponse> userLogin(
             @RequestBody UserLoginRequest req,
@@ -47,7 +62,7 @@ public class AuthController {
         cookieUtil.addTokenCookiesToResponse(response, res);
         return ResponseEntity.ok(res);
     }
-
+    @Operation(summary = "토큰 유효확인")
     @GetMapping("/me")
     public ResponseEntity<AuthResponse> getCurrentUser(HttpServletRequest request) {
         // 1. 요청의 쿠키나 헤더에 있는 토큰을 파싱해서 유저 정보를 가져옴
@@ -59,6 +74,7 @@ public class AuthController {
     // ==============================
     // COUNSELOR SIGNUP
     // ==============================
+    @Operation(summary = "상담사 회원가입")
     @PostMapping("/counselor/signup")
     public ResponseEntity<Void> counselorSignup(@RequestBody CounselorSignupRequest req) {
         log.info("[API] Counselor Signup: {}", req.email());
@@ -70,6 +86,7 @@ public class AuthController {
     // ==============================
     // COUNSELOR LOGIN
     // ==============================
+    @Operation(summary = "상담사 로그인")
     @PostMapping("/counselor/login")
     public ResponseEntity<AuthResponse> counselorLogin(
             @RequestBody CounselorLoginRequest req,
@@ -85,6 +102,7 @@ public class AuthController {
     // =======================================================
     // 🔥 REFRESH TOKEN (AccessToken 재발급)
     // =======================================================
+    @Operation(summary = "토큰 재발급")
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(
             HttpServletRequest request,
@@ -102,6 +120,7 @@ public class AuthController {
     // =======================================================
     // 🔥 LOGOUT (쿠키 삭제)
     // =======================================================
+    @Operation(summary = "로그아웃")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
 
