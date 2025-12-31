@@ -64,9 +64,7 @@ api.interceptors.response.use(
         isRefreshing = false;
         queue = [];
         
-        // 단순히 redirect를 하면 App.tsx의 initAuth와 충돌할 수 있으므로,
-        // 여기서는 로그아웃 처리나 세션 종료 로직만 수행하는 것이 안전합니다.
-        // 필요하다면 아래 주석을 해제하세요.
+
         // window.location.href = "/login"; 
         
         return Promise.reject(refreshError);

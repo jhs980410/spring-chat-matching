@@ -16,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 @Tag(
-        name = "AuthController",
+        name = "Auth",
         description = """
     인증 및 토큰 관리 API
 
