@@ -1,7 +1,5 @@
-// features/waiting/WaitingPage.tsx
-
 import { useEffect, useRef } from "react";
-import { Card, Text, Title } from "@mantine/core";
+import { Card, Text, Title, Box } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useNavigate } from "react-router-dom";
 
@@ -10,7 +8,7 @@ import { useWS } from "../../api/providers/useWS";
 import api from "../../api/axios";
 
 // ===============================
-// 타입 정의 (백엔드 기준)
+// 타입 정의
 // ===============================
 type SessionStatus =
   | "WAITING"
@@ -62,17 +60,17 @@ export default function WaitingPage() {
       try {
         const res = await api.get<SessionResponse | null>("/api/sessions/me");
 
-        // 세션 없음 → 상담 요청 페이지
+        // 세션 없음 → 상담 요청 페이지로 (/me 추가)
         if (!res.data) {
-          navigate("/request");
+          navigate("/me/support/request");
           return;
         }
 
         const { sessionId, status } = res.data;
 
-        // 이미 진행 중이면 바로 채팅방
+        // 이미 진행 중이면 바로 채팅방으로 (/me 추가)
         if (status === "IN_PROGRESS" || status === "AFTER_CALL") {
-          navigate(`/chat/${sessionId}`);
+          navigate(`/me/support/chat/${sessionId}`);
           return;
         }
 
@@ -81,10 +79,9 @@ export default function WaitingPage() {
           return;
         }
 
-        // 종료된 세션이면 다시 요청
-        navigate("/request");
+        // 그 외 상태 → 다시 요청 페이지로 (/me 추가)
+        navigate("/me/support/request");
       } catch (err: any) {
-        // 인증 만료 or 세션 조회 불가
         if (err?.response?.status === 401) {
           notifications.show({
             title: "인증 만료",
@@ -95,9 +92,7 @@ export default function WaitingPage() {
           navigate("/login");
           return;
         }
-
-        // 기타 오류 → 요청 페이지로
-        navigate("/request");
+        navigate("/me/support/request");
       }
     };
 
@@ -107,60 +102,61 @@ export default function WaitingPage() {
   // ===============================
   // 2. WebSocket 구독 (WAITING → 매칭)
   // ===============================
-useEffect(() => {
-  if (!connected) return;
+  useEffect(() => {
+    if (!connected) return;
 
-  // 연결 알림은 1회만
-  if (!wsNotifiedRef.current) {
-    wsNotifiedRef.current = true;
-    notifications.show({
-      title: "연결 완료",
-      message: "상담 서버에 연결되었습니다.",
-    });
-  }
-
-  const unsubscribe = subscribe(
-    "/sub/waiting",
-    (payload: { sessionId?: number }) => {
-      if (!payload?.sessionId) return;
-
+    if (!wsNotifiedRef.current) {
+      wsNotifiedRef.current = true;
       notifications.show({
-        title: "상담 연결",
-        message: "상담사와 연결되었습니다.",
+        title: "연결 완료",
+        message: "상담 서버에 연결되었습니다.",
       });
-
-      // 🔥 핵심: 페이지 이동 전에 반드시 구독 해제
-      unsubscribe();
-
-      navigate(`/chat/${payload.sessionId}`);
     }
-  );
 
-  return () => {
-    unsubscribe();
-  };
-}, [connected, subscribe, navigate]);
+    const unsubscribe = subscribe(
+      "/sub/waiting",
+      (payload: { sessionId?: number }) => {
+        if (!payload?.sessionId) return;
+
+        notifications.show({
+          title: "상담 연결",
+          message: "상담사와 연결되었습니다.",
+        });
+
+        // 구독 해제 후 채팅방으로 이동 (/me 추가)
+        unsubscribe();
+        navigate(`/me/support/chat/${payload.sessionId}`);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [connected, subscribe, navigate]);
 
   // ===============================
   // UI
   // ===============================
   return (
-    <div style={{ maxWidth: 480, margin: "60px auto" }}>
-      <Card shadow="sm" padding="lg">
-        <Title order={3}>상담 대기 중</Title>
+    <Box p="xl">
+      <Card shadow="sm" padding="xl" withBorder style={{ maxWidth: 480 }}>
+        <Title order={3} fw={700}>상담 대기 중</Title>
 
-        <Text mt="md">
-          로그인 ID: <b>{userId}</b>
+        <Box mt="md">
+          <Text size="sm" c="dimmed">로그인 ID</Text>
+          <Text fw={500}>{userId}</Text>
+        </Box>
+
+        <Text mt="xl" c="dimmed" size="sm" style={{ lineHeight: 1.6 }}>
+          현재 상담 연결을 위해 대기 중입니다.<br />
+          상담사가 배정되면 자동으로 채팅방으로 연결됩니다. 잠시만 기다려주세요.
         </Text>
 
-        <Text size="sm" c="dimmed" mt="xs">
-          role: {role}
-        </Text>
-
-        <Text mt="sm" c="dimmed">
-          상담사와 연결될 때까지 잠시 기다려주세요.
-        </Text>
+        {/* 로딩 표시용 (선택) */}
+        <Box mt="lg" style={{ textAlign: 'center' }}>
+           {/* 여기에 Mantine Loader 등을 추가할 수 있습니다 */}
+        </Box>
       </Card>
-    </div>
+    </Box>
   );
 }

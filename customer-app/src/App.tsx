@@ -100,29 +100,30 @@ export default function App() {
 
         <Route path="/payment/fail" element={<PaymentFailPage />} />
 
-        {/* ================= 상담 ================= */}
-        <Route
-          path="/support"
-          element={isLoggedIn ? <SessionGate /> : <Navigate to="/login" replace />}
-        >
-          <Route path="request" element={<RequestPage />} />
-          <Route path="waiting" element={<WaitingPage />} />
-          <Route path="chat/:sessionId" element={<ChatPage />} />
-        </Route>
+    
+   
 
         {/* ================= 마이페이지 ================= */}
-        <Route
-          path="/me"
-          element={isLoggedIn ? <MyPageLayout /> : <Navigate to="/login" replace />}
-        >
-          <Route index element={<MyPageHome />} />
-          <Route path="orders" element={<MyOrders />} />
-          <Route path="orders/:orderId" element={<MyOrderDetail />} />
-          <Route path="profile" element={<MyProfile />} />
-          <Route path="reserve-users" element={<MyReserveUsers />} />
-          <Route path="reserve-users/new" element={<ReserveUserForm />} />
-          <Route path="reserve-users/:id" element={<ReserveUserForm />} />
-        </Route>
+<Route
+    path="/me"
+    element={isLoggedIn ? <MyPageLayout /> : <Navigate to="/login" replace />}
+  >
+    <Route index element={<MyPageHome />} />
+    <Route path="orders" element={<MyOrders />} />
+    <Route path="orders/:orderId" element={<MyOrderDetail />} />
+    <Route path="profile" element={<MyProfile />} />
+    <Route path="reserve-users" element={<MyReserveUsers />} />
+    <Route path="reserve-users/new" element={<ReserveUserForm />} />
+    <Route path="reserve-users/:id" element={<ReserveUserForm />} />
+
+    {/* 🔥 상담 라우트 이동: /me/support 가 기점이 됩니다 */}
+    <Route path="support" element={<SessionGate />}>
+      <Route index element={<Navigate to="request" replace />} /> {/* /me/support 접속 시 바로 request로 */}
+      <Route path="request" element={<RequestPage />} />
+      <Route path="waiting" element={<WaitingPage />} />
+      <Route path="chat/:sessionId" element={<ChatPage />} />
+    </Route>
+  </Route>
 
         {/* fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

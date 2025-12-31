@@ -61,6 +61,17 @@ export default function MySidebar() {
       <Section title="계정">
         <SidebarLink to="/me/profile" label="회원정보 수정" />
       </Section>
+      <Divider my="sm" />
+
+      {/* 고객지원 - 실시간 상담 추가 */}
+      <Divider my="sm" />
+      
+      <Section title="고객지원">
+  <SidebarLink 
+    to="/me/support/request" 
+    label="1:1 실시간 상담" 
+  />
+</Section>
     </Box>
   );
 }

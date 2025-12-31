@@ -1,6 +1,5 @@
-// features/chat/ChatPage.tsx
 import { useParams } from "react-router-dom";
-import { Card, Stack, Title } from "@mantine/core";
+import { Card, Stack, Title, Box } from "@mantine/core";
 import { useEffect, useRef, useState } from "react";
 import { notifications } from "@mantine/notifications";
 
@@ -11,6 +10,9 @@ import { useWS } from "../../api/providers/useWS";
 import { useAuthStore } from "../../stores/authStore";
 import api from "../../api/axios";
 
+// ===============================
+// 타입 정의 (백엔드 WS 메시지 규격)
+// ===============================
 type WSMessage = {
   sessionId: string;
   role: "USER" | "COUNSELOR";
@@ -31,12 +33,19 @@ export default function ChatPage() {
   useEffect(() => {
     if (!sessionId) return;
 
+    // 백엔드 엔드포인트에 맞춰 호출 (예: /sessions/1/detail)
     api.get(`/sessions/${sessionId}/detail`).then((res) => {
       setMessages(res.data.messages ?? []);
+    }).catch(() => {
+      notifications.show({
+        title: "로드 실패",
+        message: "이전 대화 내용을 불러올 수 없습니다.",
+        color: "red",
+      });
     });
   }, [sessionId]);
 
-  // 2️⃣ WS 구독 (🔥 유일한 실시간 통로)
+  // 2️⃣ WS 구독 (실시간 통로)
   useEffect(() => {
     if (!connected || !sessionId) return;
     if (subscribedRef.current) return;
@@ -47,7 +56,7 @@ export default function ChatPage() {
       `/sub/session/${sessionId}`,
       (payload: WSMessage) => {
         setMessages((prev) => {
-          // ✅ senderId + timestamp 기준 중복 차단
+          // 중복 수신 방지 (senderId + timestamp 기준)
           if (
             prev.some(
               (m) =>
@@ -68,12 +77,12 @@ export default function ChatPage() {
     };
   }, [connected, sessionId, subscribe]);
 
-  // 3️⃣ 메시지 전송 (❌ 낙관적 추가 없음)
+  // 3️⃣ 메시지 전송
   const handleSend = (text: string) => {
     if (!sessionId || !connected) {
       notifications.show({
-        title: "연결 중",
-        message: "서버와 연결 중입니다.",
+        title: "연결 끊김",
+        message: "서버와 연결이 원활하지 않습니다.",
         color: "yellow",
       });
       return;
@@ -87,24 +96,31 @@ export default function ChatPage() {
     });
   };
 
-  // 4️⃣ UI 메시지 변환
+  // 4️⃣ UI 컴포넌트용 메시지 변환
   const uiMessages: ChatMessage[] = messages.map((m, idx) => ({
-    messageId: `${m.senderId}-${m.timestamp}-${idx}`, // UI용 키
+    messageId: `${m.senderId}-${m.timestamp}-${idx}`,
     senderType: m.senderId === myId ? "USER" : "COUNSELOR",
     senderId: m.senderId,
     message: m.message,
     timestamp: m.timestamp,
   }));
 
+  // ===============================
+  // UI
+  // ===============================
   return (
-    <div style={{ maxWidth: 600, margin: "40px auto" }}>
-      <Card shadow="sm" padding="lg">
-        <Stack>
-          <Title order={3}>상담 채팅</Title>
+    <Box p="xl">
+      <Card shadow="sm" padding="lg" withBorder style={{ maxWidth: 700 }}>
+        <Stack gap="md">
+          <Title order={3} fw={700}>실시간 상담 채팅</Title>
+          
+          {/* 채팅 내역 출력창 */}
           <ChatWindow messages={uiMessages} />
+          
+          {/* 메시지 입력창 */}
           <ChatInput onSend={handleSend} disabled={!connected} />
         </Stack>
       </Card>
-    </div>
+    </Box>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card, Select, Text, Title } from "@mantine/core";
+import { Button, Card, Select, Text, Title, Box } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useNavigate } from "react-router-dom";
 
@@ -56,7 +56,6 @@ export default function RequestPage() {
 
   // ===============================
   // 2. 카테고리 조회 (domain 선택 시)
-  //    ✔ CategoryController 기준
   // ===============================
   useEffect(() => {
     if (!domainId) return;
@@ -88,7 +87,7 @@ export default function RequestPage() {
       setLoading(true);
 
       const res = await api.post("/chat/request", {
-        userId, // DB 스키마 기준 필수
+        userId, 
         domainId: Number(domainId),
         categoryId: Number(categoryId),
       });
@@ -100,8 +99,8 @@ export default function RequestPage() {
         message: "상담 대기열에 등록되었습니다.",
       });
 
-      // 세션 기준 이동
-      navigate(`/waiting?sessionId=${sessionId}`);
+      // ✅ 경로 수정: /me/support/waiting 으로 이동
+      navigate(`/me/support/waiting?sessionId=${sessionId}`);
     } catch (e) {
       notifications.show({
         title: "요청 실패",
@@ -117,16 +116,17 @@ export default function RequestPage() {
   // UI
   // ===============================
   return (
-    <div style={{ maxWidth: 480, margin: "60px auto" }}>
-      <Card shadow="sm" padding="lg">
-        <Title order={3}>상담 요청</Title>
+    <Box p="xl">
+      <Card shadow="sm" padding="lg" withBorder style={{ maxWidth: 480 }}>
+        <Title order={3} fw={700}>1:1 실시간 상담</Title>
 
-        <Text size="sm" c="dimmed" mt="xs">
-          상담을 원하는 항목을 선택해주세요.
+        <Text size="sm" c="dimmed" mt="xs" mb="md">
+          원활한 상담을 위해 상담을 원하는 항목을 선택해주세요.
         </Text>
 
         <Select
           label="도메인"
+          placeholder="분야 선택"
           mt="md"
           value={domainId}
           onChange={setDomainId}
@@ -138,6 +138,7 @@ export default function RequestPage() {
 
         <Select
           label="카테고리"
+          placeholder="상세 카테고리 선택"
           mt="md"
           value={categoryId}
           onChange={setCategoryId}
@@ -149,14 +150,15 @@ export default function RequestPage() {
         />
 
         <Button
-          mt="lg"
+          mt="xl"
           fullWidth
+          size="md"
           loading={loading}
           onClick={requestCounsel}
         >
-          상담 요청
+          상담 요청하기
         </Button>
       </Card>
-    </div>
+    </Box>
   );
 }
