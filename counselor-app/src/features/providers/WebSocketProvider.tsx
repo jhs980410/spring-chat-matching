@@ -33,7 +33,7 @@ export default function WebSocketProvider({
 
     console.log("[WS] Connecting counselor:", user.id);
 
-    const socket = SockJS("http://localhost:8080/ws/connect");
+    const socket = SockJS("/ws/connect");
     const stomp: Client = Stomp.over(socket);
 
     // 로그 과다 방지

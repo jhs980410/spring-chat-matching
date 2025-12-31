@@ -10,7 +10,7 @@ export class WSClient {
     const token = useAuthStore.getState().accessToken;
     if (!token) return;
 
-    const socket = SockJS("http://localhost:8080/ws/connect");
+    const socket = SockJS("/ws/connect");
     this.stompClient = Stomp.over(socket);
 
     this.stompClient.connect(

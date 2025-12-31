@@ -16,6 +16,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
+
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -112,7 +114,13 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
 
         // 개발 환경 전체 허용
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+        config.setAllowedOrigins(Arrays.asList(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://13.209.214.254",            // 탄력적 IP
+                "http://counselor-app.o-r.kr",     // 상담사 도메인
+                "http://customer-app.o-r.kr"       // 고객 도메인 (있는 경우)
+        ));
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
 

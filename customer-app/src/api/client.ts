@@ -2,7 +2,7 @@
 import api from "../api/axios";
 
 export const apiClient = api.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "/api",
   withCredentials: true,
 });
 
