@@ -3,24 +3,26 @@ import { check, sleep } from 'k6';
 
 export const options = {
   stages: [
-   { duration: '30s', target: 550 }, 
-    { duration: '30s', target: 650 }, // 500명 돌파 시도
-    { duration: '30s', target: 750 }, // 700명까지 한계 테스트
-    { duration: '30s', target: 0 },   // 안정적인 종료
+    { duration: '30s', target: 300 }, 
+    { duration: '30s', target: 500 }, 
+    { duration: '30s', target: 700 }, 
+    { duration: '30s', target: 1000 },   
+
   ],
   thresholds: {
-    http_req_duration: ['p(95)<300'], // 95%의 응답은 0.3초 이내여야 함
-    http_req_failed: ['rate<0.01'],   // 에러율은 1% 미만이어야 함
+    http_req_duration: ['p(95)<300'], 
+    http_req_failed: ['rate<0.01'],   
   },
 };
 
 export default function () {
-  const res = http.get('http://localhost:8080/api/events/home');
+  // localhost 대신 EC2 서버의 탄력적 IP(EIP) 또는 도메인 주소를 입력하세요.
+  // Nginx 프록시를 통해 80번 포트로 열려있다면 :8080을 떼고 호출해야 할 수도 있습니다.
+const res = http.get('http://13.209.214.254/api/events/home'); 
 
   check(res, {
     'status is 200': (r) => r.status === 200,
   });
 
-  // 각 요청 사이에 1초의 대기 시간을 두어 실제 사용자 패턴 모사
   sleep(1);
 }

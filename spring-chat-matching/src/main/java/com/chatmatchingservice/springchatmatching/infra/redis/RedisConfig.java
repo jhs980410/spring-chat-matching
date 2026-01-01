@@ -1,5 +1,6 @@
 package com.chatmatchingservice.springchatmatching.infra.redis;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -106,10 +107,11 @@ public class RedisConfig {
 
     @Bean
     public RedisSubscriber redisSubscriber(
-            RedisTemplate<String, Object> redisTemplate,
+            ObjectMapper objectMapper, // ✅ 추가
             SimpMessagingTemplate messagingTemplate
     ) {
-        return new RedisSubscriber(redisTemplate, messagingTemplate);
+        // 기존의 redisTemplate 대신 objectMapper와 messagingTemplate을 전달합니다.
+        return new RedisSubscriber(objectMapper, messagingTemplate);
     }
 
     // =========================================================

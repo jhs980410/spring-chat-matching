@@ -4,6 +4,7 @@ import com.chatmatchingservice.springchatmatching.domain.event.dto.EventSummaryD
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,7 @@ import java.util.Map;
 @Getter
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor
 public class HomeResponseDto {
 
     private List<HeroBannerDto> heroBanners;

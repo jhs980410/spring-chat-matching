@@ -1,9 +1,12 @@
 package com.chatmatchingservice.springchatmatching.infra.redis;
 
+import com.chatmatchingservice.springchatmatching.domain.mypage.dto.HomeResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
+
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import java.util.List;
@@ -471,6 +474,26 @@ public class RedisRepositoryImpl implements RedisRepository {
         );
     }
 
+    @Override
+    public void setHomeCache(HomeResponseDto data, long ttlMinutes) {
+        // 객체 저장 시 만료 시간(TTL)을 설정하여 메모리 효율을 관리합니다.
+        redisTemplate.opsForValue().set(
+                RedisKeyManager.homeCache(),
+                data,
+                Duration.ofMinutes(ttlMinutes)
+        );
+    }
 
+    @Override
+    public HomeResponseDto getHomeCache() {
+        // RedisTemplate이 자동으로 JSON을 객체로 역직렬화합니다.
+        Object data = redisTemplate.opsForValue().get(RedisKeyManager.homeCache());
+        return (HomeResponseDto) data;
+    }
+
+    @Override
+    public void evictHomeCache() {
+        redisTemplate.delete(RedisKeyManager.homeCache());
+    }
 
 }

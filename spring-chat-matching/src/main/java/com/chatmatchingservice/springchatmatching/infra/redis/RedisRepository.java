@@ -1,5 +1,7 @@
 package com.chatmatchingservice.springchatmatching.infra.redis;
 
+import com.chatmatchingservice.springchatmatching.domain.mypage.dto.HomeResponseDto;
+
 import java.util.List;
 import java.util.Set;
 
@@ -106,5 +108,15 @@ public interface RedisRepository {
 
     boolean isSeatLocked(Long eventId, Long seatId);
 
+
+
+    /** 홈 화면 캐시 저장 (JSON 직렬화) */
+    void setHomeCache(HomeResponseDto data, long ttlMinutes);
+
+    /** 홈 화면 캐시 조회 */
+    HomeResponseDto getHomeCache();
+
+    /** 홈 화면 캐시 삭제 (데이터 변경 시 사용) */
+    void evictHomeCache();
 
 }

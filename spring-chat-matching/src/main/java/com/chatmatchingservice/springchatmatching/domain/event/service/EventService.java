@@ -11,23 +11,27 @@ import com.chatmatchingservice.springchatmatching.domain.event.entity.EventStatu
 import com.chatmatchingservice.springchatmatching.domain.event.repository.EventCategoryRepository;
 import com.chatmatchingservice.springchatmatching.domain.event.repository.EventRepository;
 import com.chatmatchingservice.springchatmatching.domain.ticket.repository.TicketRepository;
+import com.chatmatchingservice.springchatmatching.infra.redis.RedisRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j // 로그 확인용 추가
 public class EventService {
 
     private final EventRepository eventRepository;
     private final TicketRepository ticketRepository;
     private final EventCategoryRepository eventCategoryRepository;
+    private final RedisRepository redisRepository; //  RedisRepository 주입 추가
 
     public EventDetailDto getEventDetail(Long eventId) {
+        // 상세 페이지도 나중에 필요하면 캐싱할 수 있지만, 우선순위는 홈입니다.
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
@@ -39,25 +43,47 @@ public class EventService {
         return EventDetailDto.from(event, tickets);
     }
 
+    /**
+     * 캐시가 적용된 홈 조회 로직
+     */
     public HomeResponseDto getHome() {
+        // 1. 캐시 확인 (Cache-Aside 전략)
+        HomeResponseDto cachedData = redisRepository.getHomeCache();
+        if (cachedData != null) {
+            log.info("🎯 [Redis] Home Cache Hit! DB를 조회하지 않고 응답합니다.");
+            return cachedData;
+        }
 
-        // 1) Hero Banner (더미)
+        log.info("☁️ [DB] Home Cache Miss! DB에서 데이터를 새로 구성합니다.");
+
+        // 2. 캐시 없으면 기존 무거운 로직 수행
+        HomeResponseDto homeResponse = buildHomeResponse();
+
+        // 3. 캐시에 저장 (10분 TTL 권장)
+        redisRepository.setHomeCache(homeResponse, 10);
+
+        return homeResponse;
+    }
+
+    /**
+     * 기존 getHome 로직을 메서드로 추출하여 가독성 확보
+     */
+    private HomeResponseDto buildHomeResponse() {
+        // 1) Hero Banner
         List<HeroBannerDto> heroBanners = List.of(
                 HeroBannerDto.of(1L, "인기 공연 최대 할인", "놓치면 끝", "/images/banner1.jpg"),
                 HeroBannerDto.of(2L, "연말 콘서트 오픈", "지금 예매하세요", "/images/banner2.jpg")
         );
 
-        // 2) Featured Events (OPEN 중 최신)
+        // 2) Featured Events
         List<EventSummaryDto> featuredEvents =
                 eventRepository.findTop5ByStatusOrderByCreatedAtDesc(EventStatus.OPEN)
                         .stream()
                         .map(EventSummaryDto::from)
                         .toList();
 
-        // 3) Category Rankings (DB 카테고리 기반)
+        // 3) Category Rankings (가장 부하가 높은 지점)
         List<EventCategory> categories = eventCategoryRepository.findAll();
-
-        // JSON 키로 엔티티 쓰지 말고 code(String)로 내려라
         Map<String, List<EventSummaryDto>> rankings = new LinkedHashMap<>();
 
         for (EventCategory category : categories) {
@@ -71,7 +97,6 @@ public class EventService {
             for (Event event : events) {
                 list.add(EventSummaryDto.fromWithRanking(event, rank++));
             }
-
             rankings.put(category.getCode(), list);
         }
 

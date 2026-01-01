@@ -70,4 +70,15 @@ public class RedisKeyManager {
     public static String reservationStatus(Long eventId, Long orderId) {
         return "reservation:event:" + eventId + ":order:" + orderId;
     }
+
+
+
+// ===================== 🚀 조회 성능 최적화 (Cache) =====================
+
+    /** 홈 화면 응답 데이터 전체 캐싱용 키 */
+    public static String homeCache() {
+        return "cache:home:data";
+    }
 }
+
+

@@ -1,12 +1,11 @@
 package com.chatmatchingservice.springchatmatching.domain.mypage.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 @Getter
 @Builder
 @AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class HeroBannerDto {
 
     private Long id;

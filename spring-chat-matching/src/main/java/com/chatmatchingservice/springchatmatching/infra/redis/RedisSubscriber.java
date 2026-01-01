@@ -20,36 +20,38 @@ import java.nio.charset.StandardCharsets;
  * - Redis 채널(ws:session:*)에서 메시지를 받으면
  * - /sub/session/{sessionId} 로 STOMP 브로드캐스트
  */
-
 @RequiredArgsConstructor
 @Slf4j
 public class RedisSubscriber implements MessageListener {
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper; // JSON 파싱을 위해 추가
     private final SimpMessagingTemplate messagingTemplate;
-    @PostConstruct
-    public void init() {
-        log.warn("🔥 RedisSubscriber Bean 생성됨!");
-    }
+
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
-            // 🔥 RedisTemplate의 ValueSerializer로 역직렬화
-            Object deserialized = redisTemplate.getValueSerializer()
-                    .deserialize(message.getBody());
+            // 1. 데이터를 문자열로 읽음
+            String jsonContent = new String(message.getBody(), StandardCharsets.UTF_8);
 
-            if (!(deserialized instanceof WSMessage payload)) {
-                log.error("[RedisSubscriber] 역직렬화 실패: payload 타입이 WSMessage가 아님: {}", deserialized);
+            // 2. 일단 JsonNode로 변환하여 sessionId만 추출
+            var jsonNode = objectMapper.readTree(jsonContent);
+
+            if (!jsonNode.has("sessionId")) {
+                log.error("[RedisSubscriber] sessionId 필드가 없음: {}", jsonContent);
                 return;
             }
 
-            String dest = "/sub/session/" + payload.getSessionId();
-            messagingTemplate.convertAndSend(dest, payload);
+            Long sessionId = jsonNode.get("sessionId").asLong();
+            String dest = "/sub/session/" + sessionId;
 
-            log.debug("[RedisSubscriber] STOMP 전송 dest={}, payload={}", dest, payload);
+            // 3. 특정 클래스로 형변환하지 않고 JSON 그대로 전달
+            // 이렇게 하면 WSMessage든 SessionEndEvent든 모두 통과합니다.
+            messagingTemplate.convertAndSend(dest, jsonNode);
+
+            log.debug("[RedisSubscriber] 브로드캐스트 완료: dest={}", dest);
 
         } catch (Exception e) {
-            log.error("[RedisSubscriber] 메시지 처리 실패: {}", e.getMessage(), e);
+            log.error("[RedisSubscriber] 메시지 처리 실패: {}", e.getMessage());
         }
     }
 }

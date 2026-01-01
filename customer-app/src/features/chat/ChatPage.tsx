@@ -33,60 +33,58 @@ export default function ChatPage() {
   useEffect(() => {
     if (!sessionId) return;
 
-    // 백엔드 엔드포인트에 맞춰 호출 (예: /sessions/1/detail)
-    api.get(`/sessions/${sessionId}/detail`).then((res) => {
-      setMessages(res.data.messages ?? []);
-    }).catch(() => {
-      notifications.show({
-        title: "로드 실패",
-        message: "이전 대화 내용을 불러올 수 없습니다.",
-        color: "red",
+    api.get(`/sessions/${sessionId}/detail`)
+      .then((res) => {
+        setMessages(res.data.messages ?? []);
+      })
+      .catch(() => {
+        notifications.show({
+          title: "로드 실패",
+          message: "이전 대화 내용을 불러올 수 없습니다.",
+          color: "red",
+        });
       });
-    });
   }, [sessionId]);
 
   // 2️⃣ WS 구독 (실시간 통로)
   useEffect(() => {
-    if (!connected || !sessionId) return;
-    if (subscribedRef.current) return;
+    // 세션 정보가 없거나 이미 구독 중이면 중단
+    if (!sessionId || subscribedRef.current) return;
+    
+    // 연결 상태 확인 (connected가 true가 될 때까지 기다림)
+    if (!connected) return;
 
-    subscribedRef.current = true;
+    console.log(`[ChatPage] 구독 시작: /sub/session/${sessionId}`);
 
     const unsubscribe = subscribe(
       `/sub/session/${sessionId}`,
       (payload: WSMessage) => {
         setMessages((prev) => {
-          // 중복 수신 방지 (senderId + timestamp 기준)
-          if (
-            prev.some(
-              (m) =>
-                m.senderId === payload.senderId &&
-                m.timestamp === payload.timestamp
-            )
-          ) {
-            return prev;
-          }
+          // 중복 수신 방지
+          const isDuplicate = prev.some(
+            (m) => m.senderId === payload.senderId && m.timestamp === payload.timestamp
+          );
+          if (isDuplicate) return prev;
           return [...prev, payload];
         });
       }
     );
 
+    // ✅ 이미지의 경고 해결: 함수 존재 여부가 아니라 구독 성공 시 Ref 업데이트
+    subscribedRef.current = true;
+
     return () => {
-      subscribedRef.current = false;
-      unsubscribe?.();
+      if (unsubscribe) {
+        unsubscribe();
+        subscribedRef.current = false;
+        console.log(`[ChatPage] 구독 해제: /sub/session/${sessionId}`);
+      }
     };
   }, [connected, sessionId, subscribe]);
 
   // 3️⃣ 메시지 전송
   const handleSend = (text: string) => {
-    if (!sessionId || !connected) {
-      notifications.show({
-        title: "연결 끊김",
-        message: "서버와 연결이 원활하지 않습니다.",
-        color: "yellow",
-      });
-      return;
-    }
+    if (!sessionId) return;
 
     send(`/pub/session/${sessionId}`, {
       type: "MESSAGE",
@@ -114,11 +112,13 @@ export default function ChatPage() {
         <Stack gap="md">
           <Title order={3} fw={700}>실시간 상담 채팅</Title>
           
-          {/* 채팅 내역 출력창 */}
           <ChatWindow messages={uiMessages} />
           
-          {/* 메시지 입력창 */}
-          <ChatInput onSend={handleSend} disabled={!connected} />
+          {/* ✅ 핵심: 연결 상태(connected)가 늦더라도 메시지가 수신되었다면(length > 0) 입력창 활성화 */}
+          <ChatInput 
+            onSend={handleSend} 
+            disabled={!connected && messages.length === 0} 
+          />
         </Stack>
       </Card>
     </Box>
