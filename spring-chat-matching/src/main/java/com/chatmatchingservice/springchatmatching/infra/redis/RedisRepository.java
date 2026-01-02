@@ -119,4 +119,12 @@ public interface RedisRepository {
     /** 홈 화면 캐시 삭제 (데이터 변경 시 사용) */
     void evictHomeCache();
 
+    /** 예매 전 대기열 */
+    void addToWaitingQueue(Long eventId, Long userId, long score);
+    Long getWaitingRank(Long eventId, Long userId);
+    Set<String> popWaitingUsers(Long eventId, int count);
+    void setAccessPass(Long eventId, Long userId, long ttlMinutes);
+    boolean hasAccessPass(Long eventId, Long userId);
+
+
 }

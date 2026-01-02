@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import java.util.List;
@@ -494,6 +495,54 @@ public class RedisRepositoryImpl implements RedisRepository {
     @Override
     public void evictHomeCache() {
         redisTemplate.delete(RedisKeyManager.homeCache());
+    }
+
+    @Override
+    public void addToWaitingQueue(Long eventId, Long userId, long score) {
+        // redisStringTemplate 사용
+        redisStringTemplate.opsForZSet().add(
+                RedisKeyManager.waitingQueue(eventId),
+                userId.toString(),
+                score
+        );
+    }
+
+    @Override
+    public Long getWaitingRank(Long eventId, Long userId) {
+        // redisStringTemplate 사용
+        return redisStringTemplate.opsForZSet().rank(
+                RedisKeyManager.waitingQueue(eventId),
+                userId.toString()
+        );
+    }
+
+    @Override
+    public Set<String> popWaitingUsers(Long eventId, int count) {
+        String key = RedisKeyManager.waitingQueue(eventId);
+        // redisStringTemplate은 바로 Set<String>을 반환하므로 casting 에러가 없습니다.
+        Set<String> users = redisStringTemplate.opsForZSet().range(key, 0, count - 1);
+
+        if (users == null || users.isEmpty()) return Collections.emptySet();
+
+        // 대기열에서 삭제
+        redisStringTemplate.opsForZSet().remove(key, users.toArray());
+        return users;
+    }
+
+    @Override
+    public void setAccessPass(Long eventId, Long userId, long ttlMinutes) {
+        // redisStringTemplate 사용 (단순 문자열 저장)
+        redisStringTemplate.opsForValue().set(
+                RedisKeyManager.accessPass(eventId, userId),
+                "VALID",
+                Duration.ofMinutes(ttlMinutes)
+        );
+    }
+
+    @Override
+    public boolean hasAccessPass(Long eventId, Long userId) {
+        String key = RedisKeyManager.accessPass(eventId, userId);
+        return Boolean.TRUE.equals(redisStringTemplate.hasKey(key));
     }
 
 }

@@ -1,4 +1,4 @@
-package com.chatmatchingservice.springchatmatching.domain.ticket.controller;
+package com.chatmatchingservice.springchatmatching.domain.ticket.dto;
 
 import com.chatmatchingservice.springchatmatching.domain.event.dto.SectionResponseDto;
 import com.chatmatchingservice.springchatmatching.domain.ticket.service.SeatQueryService;

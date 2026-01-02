@@ -79,6 +79,16 @@ public class RedisKeyManager {
     public static String homeCache() {
         return "cache:home:data";
     }
+
+    /** 예매 전 대기열  */
+    public static String waitingQueue(Long eventId) {
+        return "event:waiting:" + eventId;
+    }
+
+    public static String accessPass(Long eventId, Long userId) {
+        return "event:access:" + eventId + ":" + userId;
+    }
+
 }
 
 

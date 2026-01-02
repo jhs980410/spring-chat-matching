@@ -12,7 +12,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SeatLockService {
 
-    private static final long LOCK_TTL_SECONDS = 300;
+    private static final long LOCK_TTL_SECONDS = 600;
 
     private final RedisRepository redisRepository;
 

@@ -54,6 +54,9 @@ public class SecurityConfig {
                         // 내 정보 조회(/api/auth/me)는 인증된 사용자만 가능하도록 제외하거나 상단에 명시
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/me/orders").authenticated()
+
+                        // 컨트롤러에서 Authentication을 사용하므로 .authenticated()로 설정해야 합니다.
+                        .requestMatchers("/api/waiting-room/**").authenticated()
                         //이벤트 공개
                         .requestMatchers(HttpMethod.GET, "/api/events/**").permitAll()
                         // WebSocket 핸드셰이크 허용
