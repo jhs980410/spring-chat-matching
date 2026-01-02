@@ -40,6 +40,21 @@ public class Seat {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // 🔥 추가: 좌석 예약 상태 필드
+    private boolean isReserved = false;
+
+    // 🔥 추가: 상태 체크 및 변경 메서드
+    public boolean isReserved() {
+        return this.isReserved;
+    }
+
+    public void reserve() {
+        if (this.isReserved) {
+            throw new IllegalStateException("이미 예약된 좌석입니다.");
+        }
+        this.isReserved = true;
+    }
+
     /** 🔥 좌석 가격 = 섹션에 연결된 티켓 가격 */
     public Long getPrice() {
         return section.getTicket().getPrice();

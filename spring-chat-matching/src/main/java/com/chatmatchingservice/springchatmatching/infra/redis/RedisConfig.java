@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
@@ -58,7 +59,9 @@ public class RedisConfig {
      * CRUD / Publish 전용 Connection Factory
      * - RedisTemplate 전용
      */
+
     @Bean(name = "templateConnectionFactory")
+    @Primary
     public RedisConnectionFactory templateConnectionFactory(
             @Value("${spring.data.redis.host}") String host,
             @Value("${spring.data.redis.port}") int port
@@ -78,6 +81,7 @@ public class RedisConfig {
      * - 반드시 JVM 내 단 1개
      * - 모든 ws:session:* 채널 구독
      */
+
     @Bean(name = "redisPubSubContainer")
     public RedisMessageListenerContainer redisPubSubContainer(
             @Qualifier("listenerConnectionFactory") RedisConnectionFactory connectionFactory,
