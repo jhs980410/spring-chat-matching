@@ -6,36 +6,22 @@
 
 ---
 ---
+##  프로젝트 개요
 
-## 🛠️ 기술 스택 (Tech Stack)
+### 1) 개발 정보 📅
+* **개발 기간**: 2025.11.23 ~ 2026.01.02 (6주)
+* **프로젝트 성격**: 1인 풀스택 개발 (Back-end 중심)
+* **핵심 목표**: 대규모 트래픽 상황에서의 데이터 정합성 보장 및 실시간 매칭 로직 구현
 
-### **Backend**
-| Category | Stack | Details |
-| :--- | :--- | :--- |
-| **Framework** | **Spring Boot 3.2.4** | Java 17, Spring Security 기반 무상태 아키텍처 |
-| **Concurrency** | **Redisson 3.24.3** | 분산 락(Distributed Lock) 및 MultiLock을 이용한 동시성 제어 |
-| **Data** | **JPA (MySQL)** | 비즈니스 데이터 영속성 관리 및 상담 통계 이력 저장 |
-| **Real-time** | **WebSocket (STOMP)** | Redis Pub/Sub을 브로커로 활용한 실시간 매칭/메시징 |
-| **Cache/Queue** | **Redis** | 상담 대기열(FIFO), 상담사 상태(Hash), 좌석 락(TTL) 관리 |
-| **Auth** | **JJWT 0.12.5** | JWT 기반 인증 및 STOMP 채널 내 보안 핸들러 구현 |
-| **API Doc** | **SpringDoc OpenAPI 3** | Swagger UI를 통한 API 명세 자동화 및 테스트 환경 제공 |
-
-### **Frontend (Vite + React 19 + TypeScript)**
-사용자용(Customer)과 상담사용(Counselor) 운영 서비스를 독립적인 앱으로 분리하여 구축했습니다.
-
-| Category | Stack | Details |
-| :--- | :--- | :--- |
-| **Framework** | **React 19** | Vite 기반의 최신 React 아키텍처 및 고속 빌드 환경 |
-| **UI Kit** | **Mantine UI** | Core, Carousel, Notifications, Charts(상담사용) 활용 |
-| **State** | **Zustand** | 가볍고 빠른 전역 상태 관리 (유저 세션 및 매칭 정보 저장) |
-| **Data Fetch** | **React Query / Axios** | 서버 상태 동기화 및 API 통신 최적화 (상담사앱 전용) |
-| **Real-time** | **StompJS / SockJS** | 실시간 상담 세션 연결 및 매칭 알림 수신 인터페이스 |
-| **Payment** | **Toss Payments SDK** | **Sandbox 테스트 결제 모듈 연동**을 통한 결제 승인/검증 프로세스 구현 |
-
-### **Infrastructure & Tools**
-* **Cloud**: AWS EC2 (T3.Micro - Ubuntu 22.04 LTS)
-* **Language**: Java 17 (Backend), TypeScript (Frontend)
-* **Testing**: k6 (Load Testing)
+### 2) 개발 환경 및 기술 스택 🛠️
+| Backend | Frontend | Infra & DevOps | Tools & Design |
+| :--- | :--- | :--- | :--- |
+| Java 17 | React 19 (Vite) | **AWS EC2 (T3.Micro)** | **IntelliJ IDEA** |
+| Spring Boot 3.2.4 | TypeScript | **Nginx (Reverse Proxy)** | **MySQL Workbench** |
+| Spring Data JPA | Zustand | **Docker / Docker Compose** | **diagrams.net** |
+| Redisson (Redis) | Mantine UI | GitHub Actions (CI/CD 구축 중) | GitHub |
+| JJWT 0.12.5 | React Query / Axios | k6 (Load Testing) | Notion |
+| MySQL | StompJS / SockJS | SpringDoc OpenAPI 3 | |
 ---
 
 
