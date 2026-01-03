@@ -19,7 +19,7 @@ export default function ReservePage() {
 
   const [selectedSeatIds, setSelectedSeatIds] = useState<number[]>([]);
 
-  // ✅ seatId → 라벨 매핑 (요약 패널용)
+  //  seatId → 라벨 매핑 (요약 패널용)
   const [seatLabelMap, setSeatLabelMap] = useState<
     Record<number, { rowLabel: string; seatNumber: number }>
   >({});
@@ -53,7 +53,7 @@ useEffect(() => {
     });
 }, [eventId]);
 
-  // ✅ sectionId 기준으로 선택 섹션 찾기
+  //  sectionId 기준으로 선택 섹션 찾기
   const selectedSection = sections.find(
     (s) => s.sectionId === selectedSectionId
   );
@@ -77,7 +77,7 @@ useEffect(() => {
       <div className={styles.left}>
         <div className={styles.stage}>STAGE</div>
 
-        {/* ✅ SectionMap 필드명 정합 */}
+        {/*  SectionMap 필드명 정합 */}
         <SectionMap
           sections={sections}
           selectedSectionId={selectedSectionId}
@@ -100,7 +100,7 @@ useEffect(() => {
         <ReserveSummaryPanel
           selectedSeatIds={selectedSeatIds}
           seatLabelMap={seatLabelMap}
-          price={selectedSection?.price ?? 0} // ✅ ticketPrice ❌ → price ⭕
+          price={selectedSection?.price ?? 0} // 
         />
       </div>
     </div>

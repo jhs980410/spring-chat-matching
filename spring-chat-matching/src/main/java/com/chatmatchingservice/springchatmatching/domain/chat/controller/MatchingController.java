@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
         description = """
     상담 매칭 관련 API
 
-    - 고객 상담 요청 처리
     - 상담사 상태 변경 처리
     - 매칭 로직 트리거용 진입점
     """
@@ -28,7 +27,7 @@ public class MatchingController {
     private final CounselorStatusService counselorStatusService;
 
     @Operation(
-            summary = "고객 상담 요청",
+            summary = "상담 상태 요청",
             description = """
     고객의 상담 요청을 WAITING 상태로 등록하는 API
 
