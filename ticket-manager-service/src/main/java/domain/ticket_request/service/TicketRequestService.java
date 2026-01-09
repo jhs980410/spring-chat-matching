@@ -1,5 +1,7 @@
 package domain.ticket_request.service;
 
+import domain.contract.entity.SalesContractDraft;
+import domain.contract.repository.SalesContractDraftRepository;
 import domain.manager.entity.TicketManager;
 import domain.manager.repository.TicketManagerRepository;
 import domain.ticket_request.dto.eventDraft.EventDraftCreateRequest;
@@ -25,9 +27,11 @@ public class TicketRequestService {
     private final EventDraftRepository eventDraftRepository;
     private final TicketDraftRepository ticketDraftRepository;
     private final TicketManagerRepository ticketManagerRepository;
+    private final SalesContractDraftRepository salesContractDraftRepository;
 
     public Long createDraft(
             Long managerId,
+            Long contractDraftId,
             EventDraftCreateRequest eventReq,
             List<TicketDraftCreateRequest> ticketReqs
     ) {
@@ -40,8 +44,19 @@ public class TicketRequestService {
                         new IllegalArgumentException("존재하지 않는 매니저입니다.")
                 );
 
+        SalesContractDraft contractDraft =
+                salesContractDraftRepository.findById(contractDraftId)
+                        .orElseThrow(() ->
+                                new IllegalArgumentException("존재하지 않는 계약 Draft입니다.")
+                        );
+
+        if (!contractDraft.getManager().getId().equals(managerId)) {
+            throw new IllegalStateException("계약 Draft 접근 권한이 없습니다.");
+        }
+
         EventDraft eventDraft = EventDraft.create(
                 manager,
+                contractDraft,
                 eventReq.domainId(),
                 eventReq.title(),
                 eventReq.description(),
@@ -65,6 +80,7 @@ public class TicketRequestService {
 
         return eventDraft.getId();
     }
+
 
     public void requestApproval(Long draftId, Long managerId) {
         EventDraft draft = eventDraftRepository.findById(draftId)

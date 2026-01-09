@@ -1,4 +1,4 @@
-package domain.draft.dto;
+package domain.draft.query.dto;
 
 import domain.draft.entity.DraftStatus;
 

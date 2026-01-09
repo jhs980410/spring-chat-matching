@@ -39,4 +39,6 @@ public class EventDraftEntity {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    public void approve() { this.status = DraftStatus.APPROVED; }
+    public void reject() { this.status = DraftStatus.REJECTED; }
 }

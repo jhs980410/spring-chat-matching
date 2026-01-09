@@ -1,6 +1,7 @@
 package domain.ticket_request.entity;
 
 import domain.manager.entity.TicketManager;
+import domain.contract.entity.SalesContractDraft;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -18,10 +19,23 @@ public class EventDraft {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /* =========================
+       작성 주체 (티켓매니저)
+       ========================= */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id", nullable = false)
     private TicketManager manager;
 
+    /* =========================
+       판매 계약 Draft (핵심 추가)
+       ========================= */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sales_contract_draft_id", nullable = false)
+    private SalesContractDraft salesContractDraft;
+
+    /* =========================
+       공연 메타 정보
+       ========================= */
     @Column(name = "domain_id", nullable = false)
     private Long domainId;
 
@@ -41,6 +55,9 @@ public class EventDraft {
 
     private String thumbnail;
 
+    /* =========================
+       Draft 상태
+       ========================= */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DraftStatus status;
@@ -52,10 +69,11 @@ public class EventDraft {
     private LocalDateTime createdAt;
 
     /* =========================
-       생성 로직 (정적 팩토리)
+       생성 로직
        ========================= */
     public static EventDraft create(
             TicketManager manager,
+            SalesContractDraft salesContractDraft,
             Long domainId,
             String title,
             String description,
@@ -66,6 +84,7 @@ public class EventDraft {
     ) {
         EventDraft draft = new EventDraft();
         draft.manager = manager;
+        draft.salesContractDraft = salesContractDraft;
         draft.domainId = domainId;
         draft.title = title;
         draft.description = description;
@@ -81,12 +100,12 @@ public class EventDraft {
     }
 
     /* =========================
-       상태 전이: 요청
+       상태 전이: 승인 요청
        ========================= */
     public void request() {
         if (this.status != DraftStatus.DRAFT) {
             throw new IllegalStateException(
-                    "DRAFT 상태에서만 요청할 수 있습니다."
+                    "DRAFT 상태에서만 승인 요청이 가능합니다."
             );
         }
 

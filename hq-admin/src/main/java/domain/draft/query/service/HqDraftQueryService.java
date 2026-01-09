@@ -1,9 +1,10 @@
-package domain.draft.service;
+package domain.draft.query.service;
 
-import domain.draft.dto.*;
 import domain.draft.entity.DraftStatus;
 import domain.draft.entity.EventDraftEntity;
-import domain.draft.entity.TicketDraftEntity;
+import domain.draft.query.dto.EventDraftDetailResponse;
+import domain.draft.query.dto.EventDraftSummaryResponse;
+import domain.draft.query.dto.TicketDraftResponse;
 import domain.draft.repository.EventDraftRepository;
 import domain.draft.repository.TicketDraftRepository;
 import lombok.RequiredArgsConstructor;

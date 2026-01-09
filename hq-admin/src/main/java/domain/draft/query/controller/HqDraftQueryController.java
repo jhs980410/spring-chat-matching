@@ -1,8 +1,8 @@
-package domain.draft.controller;
+package domain.draft.query.controller;
 
-import domain.draft.dto.EventDraftDetailResponse;
-import domain.draft.dto.EventDraftSummaryResponse;
-import domain.draft.service.HqDraftQueryService;
+import domain.draft.query.dto.EventDraftDetailResponse;
+import domain.draft.query.dto.EventDraftSummaryResponse;
+import domain.draft.query.service.HqDraftQueryService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
