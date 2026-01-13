@@ -6,7 +6,7 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "event_draft")
+@Table(name = "event_draft",schema = "ticket_manager")
 @Getter
 public class EventDraftEntity {
 

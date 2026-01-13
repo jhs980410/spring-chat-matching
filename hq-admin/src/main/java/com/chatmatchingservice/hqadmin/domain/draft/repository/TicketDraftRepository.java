@@ -9,4 +9,5 @@ public interface TicketDraftRepository
         extends JpaRepository<TicketDraftEntity, Long> {
 
     List<TicketDraftEntity> findByEventDraftId(Long eventDraftId);
+
 }

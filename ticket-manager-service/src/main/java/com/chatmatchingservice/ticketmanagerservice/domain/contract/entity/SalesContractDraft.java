@@ -43,6 +43,23 @@ public class SalesContractDraft {
     @Column(nullable = false)
     private String contactPhone;
 
+    @Column(name = "partner_draft_id", nullable = false)
+    private Long partnerDraftId;
+
+    @Column(name = "domain_id", nullable = false)
+    private Long domainId;
+
+    @Column(nullable = false)
+    private String settlementEmail;
+
+    @Column(nullable = false)
+    private String salesReportEmail;
+
+    @Column(nullable = false)
+    private String taxEmail;
+
+    @Column(name = "issue_method", nullable = false)
+    private String issueMethod; // DB상 ENUM이지만 String으로 우선 매핑
     /* =========================
        상태
        ========================= */
@@ -61,19 +78,32 @@ public class SalesContractDraft {
        ========================= */
     public static SalesContractDraft create(
             TicketManager manager,
+            Long partnerDraftId,
+            Long domainId,
             String businessName,
             String businessNumber,
             String ceoName,
             String contactEmail,
-            String contactPhone
+            String contactPhone,
+            String settlementEmail,
+            String salesReportEmail,
+            String taxEmail,
+            String issueMethod
     ) {
         SalesContractDraft draft = new SalesContractDraft();
         draft.manager = manager;
+        draft.partnerDraftId = partnerDraftId;
+        draft.domainId = domainId;
         draft.businessName = businessName;
         draft.businessNumber = businessNumber;
         draft.ceoName = ceoName;
         draft.contactEmail = contactEmail;
         draft.contactPhone = contactPhone;
+        draft.settlementEmail = settlementEmail;
+        draft.salesReportEmail = salesReportEmail;
+        draft.taxEmail = taxEmail;
+        draft.issueMethod = issueMethod; // 'ONLINE', 'ON_SITE', 'DELIVERY' 중 하나
+
         draft.status = ContractDraftStatus.DRAFT;
         draft.createdAt = LocalDateTime.now();
         return draft;

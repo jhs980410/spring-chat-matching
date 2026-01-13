@@ -1,6 +1,5 @@
 package com.chatmatchingservice.hqadmin.domain.approval.controller;
 
-
 import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalRequest;
 import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalResponse;
 import com.chatmatchingservice.hqadmin.domain.approval.service.HqApprovalService;
@@ -12,40 +11,53 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(
         name = "HQ Approval",
-        description = """
-        본사(HQ) 승인/반려 API
-
-        - REQUESTED 상태 Draft만 처리 가능
-        - 승인/반려 이력은 event_approval 테이블에 기록
-        """
+        description = "본사(HQ) 관리자용 승인/반려 통합 API"
 )
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/hq/approvals")
+@RequestMapping("/api/hq/approvals") // 공통 경로
 public class HqApprovalController {
 
     private final HqApprovalService approvalService;
 
-    // ========================================
-    // 승인
-    // ========================================
-    @Operation(summary = "Draft 승인")
-    @PostMapping("/{draftId}/approve")
-    public ResponseEntity<ApprovalResponse> approve(
+    /**
+     * 1. 판매 계약(Contract) 승인 API
+     * 타겟 테이블: ticket_manager.sales_contract_draft
+     */
+    @Operation(summary = "판매 계약 승인", description = "매니저가 신청한 판매 계약을 승인합니다.")
+    @PostMapping("/contracts/{draftId}/approve")
+    public ResponseEntity<ApprovalResponse> approveContract(
             @RequestHeader("X-ADMIN-ID") Long adminId,
             @PathVariable Long draftId
     ) {
+        // 서비스의 계약 승인 전용 로직 호출
+        return ResponseEntity.ok(
+                approvalService.approveContract(draftId, adminId)
+        );
+    }
+
+    /**
+     * 2. 공연(Event) 승인 API
+     * 타겟 테이블: ticket_manager.event_draft
+     */
+    @Operation(summary = "공연 Draft 승인", description = "계약 승인 후 등록된 공연 초안을 승인합니다.")
+    @PostMapping("/events/{draftId}/approve")
+    public ResponseEntity<ApprovalResponse> approveEvent(
+            @RequestHeader("X-ADMIN-ID") Long adminId,
+            @PathVariable Long draftId
+    ) {
+        // 서비스의 공연 승인 전용 로직 호출
         return ResponseEntity.ok(
                 approvalService.approve(draftId, adminId)
         );
     }
 
-    // ========================================
-    // 반려
-    // ========================================
-    @Operation(summary = "Draft 반려")
-    @PostMapping("/{draftId}/reject")
-    public ResponseEntity<ApprovalResponse> reject(
+    /**
+     * 3. 공연(Event) 반려 API
+     */
+    @Operation(summary = "공연 Draft 반려")
+    @PostMapping("/events/{draftId}/reject")
+    public ResponseEntity<ApprovalResponse> rejectEvent(
             @RequestHeader("X-ADMIN-ID") Long adminId,
             @PathVariable Long draftId,
             @RequestBody ApprovalRequest request

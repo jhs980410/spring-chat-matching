@@ -29,11 +29,17 @@ public class SalesContractDraftService {
 
         SalesContractDraft draft = SalesContractDraft.create(
                 manager,
+                req.partnerDraftId(),
+                req.domainId(),
                 req.businessName(),
                 req.businessNumber(),
                 req.ceoName(),
                 req.contactEmail(),
-                req.contactPhone()
+                req.contactPhone(),
+                req.settlementEmail(),
+                req.salesReportEmail(),
+                req.taxEmail(),
+                req.issueMethod()
         );
 
         repository.save(draft);
