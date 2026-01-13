@@ -28,32 +28,30 @@ public class TicketRequestService {
     private final TicketDraftRepository ticketDraftRepository;
     private final TicketManagerRepository ticketManagerRepository;
     private final SalesContractDraftRepository salesContractDraftRepository;
-
     public Long createDraft(
             Long managerId,
             Long contractDraftId,
             EventDraftCreateRequest eventReq,
             List<TicketDraftCreateRequest> ticketReqs
     ) {
+        // 1. 최소 티켓 검증
         if (ticketReqs == null || ticketReqs.isEmpty()) {
-            throw new IllegalArgumentException("티켓은 최소 1개 이상 필요합니다.");
+            throw new IllegalArgumentException("티켓 및 좌석 설정은 최소 1개 이상 필요합니다.");
         }
 
+        // 2. 매니저 존재 여부 확인
         TicketManager manager = ticketManagerRepository.findById(managerId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 매니저입니다.")
-                );
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 매니저입니다."));
 
-        SalesContractDraft contractDraft =
-                salesContractDraftRepository.findById(contractDraftId)
-                        .orElseThrow(() ->
-                                new IllegalArgumentException("존재하지 않는 계약 Draft입니다.")
-                        );
+        // 3. 판매 계약(Contract) 확인 및 권한 검증
+        SalesContractDraft contractDraft = salesContractDraftRepository.findById(contractDraftId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 계약 Draft입니다."));
 
         if (!contractDraft.getManager().getId().equals(managerId)) {
-            throw new IllegalStateException("계약 Draft 접근 권한이 없습니다.");
+            throw new IllegalStateException("해당 계약 Draft에 대한 생성 권한이 없습니다.");
         }
 
+        // 4. Event 초안 생성 및 저장
         EventDraft eventDraft = EventDraft.create(
                 manager,
                 contractDraft,
@@ -65,23 +63,26 @@ public class TicketRequestService {
                 eventReq.endAt(),
                 eventReq.thumbnail()
         );
-
         eventDraftRepository.save(eventDraft);
 
+        // 5. 티켓(가격정책) + 좌석 구역 정보 저장
         for (TicketDraftCreateRequest t : ticketReqs) {
+            // 운영 서버(8080)의 지정좌석제 로직을 충족하기 위해
+            // 구역 코드, 구역 이름, 열 정보를 함께 Draft로 만듭니다.
             TicketDraft ticketDraft = TicketDraft.create(
                     eventDraft,
                     t.name(),
                     t.price(),
-                    t.totalQuantity()
+                    t.totalQuantity(),
+                    t.sectionCode(), // 추가
+                    t.sectionName(), // 추가
+                    t.rowLabel()     // 추가
             );
             ticketDraftRepository.save(ticketDraft);
         }
 
         return eventDraft.getId();
     }
-
-
     public void requestApproval(Long draftId, Long managerId) {
         EventDraft draft = eventDraftRepository.findById(draftId)
                 .orElseThrow(() ->
