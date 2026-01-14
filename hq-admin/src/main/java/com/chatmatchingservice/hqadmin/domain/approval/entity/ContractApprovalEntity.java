@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "contract_approval", schema = "hq_admin")
+@Table(name = "contract_approval", catalog = "hq_admin")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ContractApprovalEntity {

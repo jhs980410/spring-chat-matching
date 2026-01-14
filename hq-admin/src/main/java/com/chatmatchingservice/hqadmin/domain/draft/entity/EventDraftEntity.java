@@ -53,6 +53,8 @@ public class EventDraftEntity {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    @Column(name = "category_id") // 🔥 이 필드를 추가해서 DB의 값을 읽어옵니다.
+    private Long categoryId;
 
 
 

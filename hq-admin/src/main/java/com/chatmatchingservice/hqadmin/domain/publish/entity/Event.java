@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "event", schema = "chatmatching")
+@Table(name = "event", catalog = "chatmatching")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Event {
@@ -44,12 +44,14 @@ public class Event {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
+    @Column(name = "category_id", nullable = false)
+    private Long categoryId;
     /* =========================
        생성 로직 (Publish 전용)
        ========================= */
     public static Event create(
             Long domainId,
+            Long categoryId, // 🔥 매개변수 추가
             String title,
             String description,
             String venue,
@@ -59,6 +61,7 @@ public class Event {
     ) {
         Event event = new Event();
         event.domainId = domainId;
+        event.categoryId = categoryId; // 🔥 값 할당
         event.title = title;
         event.description = description;
         event.venue = venue;

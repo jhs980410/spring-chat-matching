@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-        name = "event_approval",
+        name = "event_approval",catalog = "hq_admin",
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_event_approval_draft",

@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -28,6 +29,7 @@ public class TicketRequestService {
     private final TicketDraftRepository ticketDraftRepository;
     private final TicketManagerRepository ticketManagerRepository;
     private final SalesContractDraftRepository salesContractDraftRepository;
+
     public Long createDraft(
             Long managerId,
             Long contractDraftId,
@@ -52,10 +54,12 @@ public class TicketRequestService {
         }
 
         // 4. Event 초안 생성 및 저장
+        // 🔥 eventReq.categoryId()를 추가로 전달합니다.
         EventDraft eventDraft = EventDraft.create(
                 manager,
                 contractDraft,
                 eventReq.domainId(),
+                eventReq.categoryId(), // 👈 추가된 부분
                 eventReq.title(),
                 eventReq.description(),
                 eventReq.venue(),
@@ -67,27 +71,24 @@ public class TicketRequestService {
 
         // 5. 티켓(가격정책) + 좌석 구역 정보 저장
         for (TicketDraftCreateRequest t : ticketReqs) {
-            // 운영 서버(8080)의 지정좌석제 로직을 충족하기 위해
-            // 구역 코드, 구역 이름, 열 정보를 함께 Draft로 만듭니다.
             TicketDraft ticketDraft = TicketDraft.create(
                     eventDraft,
                     t.name(),
                     t.price(),
                     t.totalQuantity(),
-                    t.sectionCode(), // 추가
-                    t.sectionName(), // 추가
-                    t.rowLabel()     // 추가
+                    t.sectionCode(),
+                    t.sectionName(),
+                    t.rowLabel()
             );
             ticketDraftRepository.save(ticketDraft);
         }
 
         return eventDraft.getId();
     }
+
     public void requestApproval(Long draftId, Long managerId) {
         EventDraft draft = eventDraftRepository.findById(draftId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 Draft입니다.")
-                );
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Draft입니다."));
 
         if (!draft.getManager().getId().equals(managerId)) {
             throw new IllegalStateException("해당 Draft에 대한 요청 권한이 없습니다.");
@@ -98,7 +99,6 @@ public class TicketRequestService {
 
     @Transactional(readOnly = true)
     public List<EventDraftResponse> getDrafts(Long managerId, DraftStatus status) {
-
         List<EventDraft> drafts = (status == null)
                 ? eventDraftRepository.findByManager_Id(managerId)
                 : eventDraftRepository.findByManager_IdAndStatus(managerId, status);
@@ -116,11 +116,8 @@ public class TicketRequestService {
 
     @Transactional(readOnly = true)
     public EventDraftDetailResponse getDraftDetail(Long draftId, Long managerId) {
-
         EventDraft draft = eventDraftRepository.findById(draftId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 Draft입니다.")
-                );
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Draft입니다."));
 
         if (!draft.getManager().getId().equals(managerId)) {
             throw new IllegalStateException("조회 권한이 없습니다.");
@@ -151,6 +148,4 @@ public class TicketRequestService {
                 tickets
         );
     }
-
-
 }

@@ -27,7 +27,7 @@ public class EventDraft {
     private TicketManager manager;
 
     /* =========================
-       판매 계약 Draft (핵심 추가)
+       판매 계약 Draft
        ========================= */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sales_contract_draft_id", nullable = false)
@@ -38,6 +38,9 @@ public class EventDraft {
        ========================= */
     @Column(name = "domain_id", nullable = false)
     private Long domainId;
+
+    @Column(name = "category_id", nullable = false) // 🔥 추가: 운영 DB 배포를 위한 필수 컬럼
+    private Long categoryId;
 
     @Column(nullable = false)
     private String title;
@@ -75,6 +78,7 @@ public class EventDraft {
             TicketManager manager,
             SalesContractDraft salesContractDraft,
             Long domainId,
+            Long categoryId, //  매개변수 추가
             String title,
             String description,
             String venue,
@@ -86,6 +90,7 @@ public class EventDraft {
         draft.manager = manager;
         draft.salesContractDraft = salesContractDraft;
         draft.domainId = domainId;
+        draft.categoryId = categoryId; //  카테고리 ID 할당
         draft.title = title;
         draft.description = description;
         draft.venue = venue;
