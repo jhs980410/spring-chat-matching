@@ -30,8 +30,8 @@ public class EventPublishService {
     @Transactional
     public Long publish(Long draftId) {
         // 1. Draft 및 승인 상태 검증
-        EventDraftEntity draft =eventDraftRepository.findBySalesContractDraftId(8L)
-                .orElseThrow(() -> new IllegalArgumentException("ID:  에 해당하는 Draft를 찾을 수 없습니다."));
+        EventDraftEntity draft =eventDraftRepository.findById(draftId)
+                .orElseThrow(() -> new IllegalArgumentException("ID: " + draftId + " 에 해당하는 Draft를 찾을 수 없습니다."));
         if (draft.getStatus() != DraftStatus.APPROVED) {
             throw new IllegalStateException("APPROVED 상태의 Draft만 publish 가능합니다.");
         }

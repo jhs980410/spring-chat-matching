@@ -28,32 +28,29 @@ public class HqApprovalService {
     /**
      * 1. 판매 계약(Sales Contract) 승인
      */
+    /**
+     * 1. 판매 계약(Sales Contract) 승인
+     */
     public ApprovalResponse approveContract(Long draftId, Long adminId) {
-        // ticket_manager.sales_contract_draft 테이블에서 조회
         SalesContractDraft draft = contractDraftRepository.findById(draftId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 계약 Draft입니다."));
 
-
-        // 상태 검증: REQUESTED 상태만 승인 가능
         if (draft.getStatus() != DraftStatus.REQUESTED) {
             throw new IllegalStateException("REQUESTED 상태의 계약만 승인할 수 있습니다.");
         }
 
-        // 상태 변경 (REQUESTED -> APPROVED)
-        draft.approve();
+        draft.approve(); // sales_contract_draft 테이블만 APPROVED로 변경
 
-        // 승인 로그 저장 (필요시)
-        EventApprovalEntity approval = EventApprovalEntity.approve(draftId, adminId);
-        approvalRepository.save(approval);
+        // EventApprovalEntity approval = EventApprovalEntity.approve(draftId, adminId);
+        // approvalRepository.save(approval);
 
         return new ApprovalResponse(
                 draftId,
                 ApprovalStatus.APPROVED,
                 null,
-                approval.getDecidedAt()
+                LocalDateTime.now() // 결정 시간은 현재 시간으로 대체
         );
     }
-
     /**
      * 2. 공연(Event) 승인 (기존 로직)
      */
@@ -63,10 +60,13 @@ public class HqApprovalService {
 
         validateDraft(draft);
 
+        // 1. 이력 저장
         EventApprovalEntity approval = EventApprovalEntity.approve(draftId, adminId);
         approvalRepository.save(approval);
 
-        draft.approve();
+        // 2. 상태 변경 및 명시적 저장
+        draft.approve(); // 내부적으로 this.status = DraftStatus.APPROVED; 수행
+        eventDraftRepository.save(draft); //  이 코드를 넣어 UPDATE를 강제
 
         return new ApprovalResponse(
                 draftId,

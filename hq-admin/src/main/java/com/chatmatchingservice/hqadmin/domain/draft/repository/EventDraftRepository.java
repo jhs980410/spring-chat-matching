@@ -5,7 +5,7 @@ import com.chatmatchingservice.hqadmin.domain.draft.entity.EventDraftEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional; // 이 import가 필요합니다.
+import java.util.Optional;
 
 public interface EventDraftRepository extends JpaRepository<EventDraftEntity, Long> {
 

@@ -11,9 +11,9 @@ import java.time.LocalDateTime;
 /**
  * [수정 포인트]
  * MySQL에서는 schema 대신 catalog를 사용해야 '스키마.테이블' 형태로 쿼리가 정확히 생성됩니다.
- * 또한 하이버네이트가 점(.)을 백틱으로 감싸지 않도록 주의해야 합니다.
+ * 또한 하이버네이트가 점(.)을 백틱으로 감싸지 않도록 주의해야 함.
  */
-@Table(name = "event_draft", catalog = "ticket_manager")
+    @Table(name = "event_draft", catalog = "ticket_manager")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA 엔티티 기본 생성자 추가
 public class EventDraftEntity {
