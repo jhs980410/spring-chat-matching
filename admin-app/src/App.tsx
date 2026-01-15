@@ -1,35 +1,27 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { AdminLayout } from './components/layout/AdminLayout';
+import { HqApprovalPage } from './pages/hq/HqApprovalPage';
+import { HqPublishPage } from './pages/hq/HqPublishPage'; // 추가
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <Routes>
+      {/* HQ 관리자 경로 설정 */}
+      <Route path="/hq" element={<AdminLayout />}>
+        {/* 기본 접속 시 승인 대기 목록으로 이동 */}
+        <Route index element={<Navigate to="/hq/approvals" replace />} />
+        
+        {/* 1. 승인 관리 페이지 (검토/반려/승인) */}
+        <Route path="approvals" element={<HqApprovalPage />} />
+        
+        {/* 2. 발행 관리 페이지 (최종 운영 배포) */}
+        <Route path="publish" element={<HqPublishPage />} />
+      </Route>
+
+      {/* 예외 경로 처리 */}
+      <Route path="/" element={<Navigate to="/hq/approvals" replace />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;

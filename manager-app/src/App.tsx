@@ -1,35 +1,35 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { MantineProvider, createTheme } from '@mantine/core';
+import '@mantine/core/styles.css'; 
+import '@mantine/notifications/styles.css'; // 알림(Notifications) 스타일 추가
+import { Notifications } from '@mantine/notifications';
+import {  Routes, Route, Navigate } from 'react-router-dom';
 
+import { ManagerLayout } from './components/layout/ManagerLayout';
+import { EventCreatePage } from './pages/event/EventCreatePage';
+import { EventListPage } from './pages/event/EventListPage'; // 추가
+import { ContractListPage } from './pages/contract/ContractListPage'; // 추가
+
+const theme = createTheme({
+  primaryColor: 'blue',
+  defaultRadius: 'md',
+});
+// App.tsx 수정 후
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <MantineProvider theme={theme}>
+      <Notifications position="top-right" />
+      {/* <BrowserRouter> 제거! */}
+        <Routes>
+          <Route element={<ManagerLayout children={<div />} />}>
+            <Route path="/" element={<Navigate to="/events" replace />} />
+            <Route path="/events" element={<EventListPage />} />
+            <Route path="/events/new" element={<EventCreatePage />} />
+            <Route path="/contracts" element={<ContractListPage />} />
+          </Route>
+        </Routes>
+      {/* </BrowserRouter> 제거! */}
+    </MantineProvider>
+  );
 }
 
-export default App
+export default App;
