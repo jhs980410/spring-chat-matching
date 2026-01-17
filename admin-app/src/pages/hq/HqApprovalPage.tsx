@@ -1,180 +1,197 @@
 import { useState, useEffect } from 'react';
 import { 
   Container, Title, Card, Table, Badge, Button, Group, 
-  Text, Modal, Stack, Divider, Image, SimpleGrid, LoadingOverlay, Textarea 
-} from '@mantine/core';
+  Text, Modal, Stack, Divider, SimpleGrid, LoadingOverlay, 
+  Textarea, Tabs, Box, ScrollArea 
+} from '@mantine/core'; // [cite: 2026-01-01] Box 추가됨
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconX, IconRocket, IconSearch } from '@tabler/icons-react';
+import { IconCheck, IconX, IconSearch, IconFileCertificate, IconTicket } from '@tabler/icons-react';
+import axios from 'axios';
 
-// 1. 목록용 더미 데이터 (EventDraftSummaryResponse 구조)
-const DUMMY_LIST = [
-  { id: 1, title: "2026 윈터 재즈 페스티벌", status: "REQUESTED", requestedAt: "2026-01-15T10:00:00" },
-  { id: 2, title: "현대미술 기획전: 빛의 형태", status: "APPROVED", requestedAt: "2026-01-14T14:30:00" },
-  { id: 3, title: "뮤지컬 <라흐마니노프>", status: "REQUESTED", requestedAt: "2026-01-15T09:15:00" },
-];
+// --- 인터페이스 정의 (백엔드 DTO 구조와 일치) [cite: 2026-01-13] ---
+interface ContractDraft {
+  id: number;
+  businessName: string;
+  issueMethod: string;
+  requestedAt: string;
+  businessNumber?: string;
+  settlementEmail?: string;
+}
 
-// 2. 상세용 더미 데이터 (EventDraftDetailResponse 구조)
-const DUMMY_DETAIL_DATA: Record<number, any> = {
-  1: {
-    id: 1,
-    title: "2026 윈터 재즈 페스티벌",
-    description: "한겨울 밤의 낭만을 더해줄 재즈 아티스트들의 향연",
-    venue: "세종문화회관 대극장",
-    startAt: "2026-02-10T19:00:00",
-    endAt: "2026-02-12T22:00:00",
-    thumbnail: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800",
-    status: "REQUESTED",
-    tickets: [
-      { id: 101, name: "VIP석", price: 150000, totalQuantity: 50 },
-      { id: 102, name: "R석", price: 120000, totalQuantity: 150 },
-      { id: 103, name: "S석", price: 80000, totalQuantity: 300 }
-    ]
-  },
-  2: {
-    id: 2,
-    title: "현대미술 기획전: 빛의 형태",
-    description: "디지털 미디어와 빛을 이용한 현대미술의 재해석",
-    venue: "DDP 배움터",
-    startAt: "2026-03-01T10:00:00",
-    endAt: "2026-05-31T18:00:00",
-    thumbnail: "https://images.unsplash.com/photo-1554188248-986adbb73be4?w=800",
-    status: "APPROVED",
-    tickets: [{ id: 201, name: "일반입장권", price: 20000, totalQuantity: 5000 }]
-  }
-};
+interface EventDraft {
+  eventDraftId: number;
+  title: string;
+  status: string;
+  requestedAt: string;
+}
+
+const API_BASE = 'http://localhost:8082/api/hq/approvals';
+const ADMIN_HEADERS = { 'X-ADMIN-ID': '1' };
 
 export function HqApprovalPage() {
-  const [drafts, setDrafts] = useState<any[]>([]);
-  const [selectedDraft, setSelectedDraft] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<string | null>('contracts');
+  const [contracts, setContracts] = useState<ContractDraft[]>([]);
+  const [events, setEvents] = useState<EventDraft[]>([]);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [detailOpened, setDetailOpened] = useState(false);
   const [rejectModalOpened, setRejectModalOpened] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 초기 데이터 로드 시뮬레이션
-  useEffect(() => {
+  const fetchData = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setDrafts(DUMMY_LIST);
+    try {
+      const url = activeTab === 'contracts' ? '/contracts/pending' : '/events/pending';
+      const res = await axios.get(`${API_BASE}${url}`, { headers: ADMIN_HEADERS });
+      if (activeTab === 'contracts') setContracts(res.data);
+      else setEvents(res.data);
+    } catch (error) {
+      notifications.show({ title: '데이터 로드 실패', message: 'API 서버 상태를 확인하세요.', color: 'red' });
+    } finally {
       setLoading(false);
-    }, 600);
-  }, []);
+    }
+  };
 
-  // 상세 조회 시뮬레이션
-  const handleViewDetail = (id: number) => {
+  useEffect(() => { fetchData(); }, [activeTab]);
+
+  const handleApprove = async () => {
+    if (!selectedItem) return;
     setLoading(true);
-    setTimeout(() => {
-      setSelectedDraft(DUMMY_DETAIL_DATA[id] || DUMMY_DETAIL_DATA[1]);
-      setDetailOpened(true);
+    const targetId = activeTab === 'contracts' ? selectedItem.id : selectedItem.eventDraftId;
+    const endpoint = activeTab === 'contracts' ? `/contracts/${targetId}/approve` : `/events/${targetId}/approve`;
+
+    try {
+      await axios.post(`${API_BASE}${endpoint}`, {}, { headers: ADMIN_HEADERS });
+      notifications.show({ 
+        title: '승인 완료', 
+        message: '성공적으로 승인되었습니다.', // [cite: 2026-01-01] message 필수 추가
+        color: 'green', 
+        icon: <IconCheck size={16}/> 
+      });
+      setDetailOpened(false);
+      fetchData();
+    } catch (error) {
+      notifications.show({ title: '승인 실패', message: '오류가 발생했습니다.', color: 'red' });
+    } finally {
       setLoading(false);
-    }, 400);
+    }
   };
 
-  // 승인 시뮬레이션
-  const handleApprove = (id: number) => {
-    notifications.show({ title: '승인 처리됨', message: `ID: ${id} 공연이 승인되었습니다.`, color: 'green', icon: <IconCheck size={16}/> });
-    setDrafts(prev => prev.map(d => d.id === id ? { ...d, status: 'APPROVED' } : d));
-    setDetailOpened(false);
-  };
-
-  // 반려 시뮬레이션
-  const handleReject = () => {
-    notifications.show({ title: '반려 처리됨', message: `사유: ${rejectReason}`, color: 'red', icon: <IconX size={16}/> });
-    setRejectModalOpened(false);
-    setDetailOpened(false);
-    setRejectReason('');
-  };
-
-  // 발행 시뮬레이션
-  const handlePublish = (id: number) => {
-    notifications.show({ title: '운영 발행 성공', message: '공연이 실시간 서버에 반영되었습니다.', color: 'blue', icon: <IconRocket size={16}/> });
+  const handleReject = async () => {
+    if (!selectedItem || !rejectReason.trim()) {
+        notifications.show({ title: '반려 불가', message: '사유를 입력해주세요.', color: 'yellow' });
+        return;
+    }
+    const targetId = activeTab === 'contracts' ? selectedItem.id : selectedItem.eventDraftId;
+    try {
+      await axios.post(`${API_BASE}/events/${targetId}/reject`, { reason: rejectReason }, { headers: ADMIN_HEADERS });
+      notifications.show({ 
+        title: '반려 완료', 
+        message: '반려 처리가 완료되었습니다.', // [cite: 2026-01-01] image_b869a6.png 에러 수정
+        color: 'orange', 
+        icon: <IconX size={16}/> 
+      });
+      setRejectModalOpened(false);
+      setDetailOpened(false);
+      setRejectReason('');
+      fetchData();
+    } catch (error) {
+      notifications.show({ title: '반려 실패', message: '서버 응답을 확인하세요.', color: 'red' });
+    }
   };
 
   return (
     <Container size="xl" py="xl">
       <LoadingOverlay visible={loading} overlayProps={{ blur: 2 }} />
-      <Title order={2} mb="xl">HQ Admin: 초안 검토 및 발행</Title>
+      <Box mb="xl">
+        <Title order={2} c="blue.9">HQ Admin: 통합 승인 센터</Title>
+        <Text size="sm" c="dimmed">계약 및 공연 초안을 검토합니다.</Text>
+      </Box>
 
-      <Card withBorder radius="md" shadow="xs">
-        <Table verticalSpacing="md" highlightOnHover>
-          <Table.Thead bg="gray.0">
-            <Table.Tr>
-              <Table.Th>ID</Table.Th>
-              <Table.Th>공연 제목</Table.Th>
-              <Table.Th>상태</Table.Th>
-              <Table.Th>작업</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {drafts.map((d) => (
-              <Table.Tr key={d.id}>
-                <Table.Td>{d.id}</Table.Td>
-                <Table.Td fw={500}>{d.title}</Table.Td>
-                <Table.Td>
-                  <Badge color={d.status === 'APPROVED' ? 'green' : d.status === 'REQUESTED' ? 'blue' : 'gray'} variant="light">
-                    {d.status}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <Button variant="light" size="xs" leftSection={<IconSearch size={14} />} onClick={() => handleViewDetail(d.id)}>검토</Button>
-                    {d.status === 'APPROVED' && (
-                      <Button color="dark" size="xs" leftSection={<IconRocket size={14} />} onClick={() => handlePublish(d.id)}>Publish</Button>
-                    )}
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
-      </Card>
+      <Tabs value={activeTab} onChange={setActiveTab} variant="outline">
+        <Tabs.List mb="lg">
+          <Tabs.Tab value="contracts" leftSection={<IconFileCertificate size={16}/>}>판매 계약 검토</Tabs.Tab>
+          <Tabs.Tab value="events" leftSection={<IconTicket size={16}/>}>공연 초안 검토</Tabs.Tab>
+        </Tabs.List>
 
-      {/* 상세 검토 모달 */}
-      <Modal opened={detailOpened} onClose={() => setDetailOpened(false)} title="공연 상세 정보 검토" size="xl">
-        {selectedDraft && (
+        <Tabs.Panel value="contracts">
+          <Card withBorder radius="md" p={0}>
+            <ScrollArea>
+              <Table verticalSpacing="md" highlightOnHover>
+                <Table.Thead bg="gray.0">
+                  <Table.Tr>
+                    <Table.Th style={{ paddingLeft: 20 }}>ID</Table.Th>
+                    <Table.Th>업체명</Table.Th>
+                    <Table.Th>발권 방식</Table.Th>
+                    <Table.Th>요청일시</Table.Th>
+                    <Table.Th>액션</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {contracts.map((item) => (
+                    <Table.Tr key={item.id}>
+                      <Table.Td style={{ paddingLeft: 20 }}>{item.id}</Table.Td>
+                      <Table.Td fw={600}>{item.businessName}</Table.Td>
+                      <Table.Td><Badge variant="outline">{item.issueMethod}</Badge></Table.Td>
+                      {/* [cite: 2026-01-01] image_b869c4.png 수정: size 속성 제거 */}
+                      <Table.Td>{new Date(item.requestedAt).toLocaleString()}</Table.Td>
+                      <Table.Td><Button variant="light" size="xs" onClick={() => { setSelectedItem(item); setDetailOpened(true); }}>검토</Button></Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
+          </Card>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="events">
+          <Card withBorder radius="md" p={0}>
+            <ScrollArea>
+              <Table verticalSpacing="md" highlightOnHover>
+                <Table.Thead bg="gray.0">
+                  <Table.Tr>
+                    <Table.Th style={{ paddingLeft: 20 }}>ID</Table.Th>
+                    <Table.Th>공연 제목</Table.Th>
+                    <Table.Th>요청일시</Table.Th>
+                    <Table.Th>액션</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {events.map((item) => (
+                    <Table.Tr key={item.eventDraftId}>
+                      <Table.Td style={{ paddingLeft: 20 }}>{item.eventDraftId}</Table.Td>
+                      <Table.Td fw={600}>{item.title}</Table.Td>
+                      <Table.Td>{new Date(item.requestedAt).toLocaleString()}</Table.Td>
+                      <Table.Td><Button variant="light" color="teal" size="xs" onClick={() => { setSelectedItem(item); setDetailOpened(true); }}>검토</Button></Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
+          </Card>
+        </Tabs.Panel>
+      </Tabs>
+
+      <Modal opened={detailOpened} onClose={() => setDetailOpened(false)} title="상세 검토" size="lg" centered>
+        {selectedItem && (
           <Stack>
-            <SimpleGrid cols={2} spacing="xl">
-              <Image src={selectedDraft.thumbnail} radius="md" fallbackSrc="https://via.placeholder.com/400x500?text=No+Image" />
-              <Stack gap="xs">
-                <Title order={3}>{selectedDraft.title}</Title>
-                <Text size="sm" c="dimmed">{selectedDraft.description}</Text>
-                <Divider my="xs" />
-                <Text size="sm"><b>장소:</b> {selectedDraft.venue}</Text>
-                <Text size="sm"><b>기간:</b> {new Date(selectedDraft.startAt).toLocaleDateString()} ~ {new Date(selectedDraft.endAt).toLocaleDateString()}</Text>
-                <Divider my="xs" />
-                <Text fw={700} size="sm">티켓 구성</Text>
-                {selectedDraft.tickets?.map((t: any) => (
-                  <Group key={t.id} justify="space-between">
-                    <Text size="xs">{t.name} ({t.totalQuantity}석)</Text>
-                    <Text size="xs" fw={600}>{t.price.toLocaleString()}원</Text>
-                  </Group>
-                ))}
-              </Stack>
+            <SimpleGrid cols={2}>
+              <Text size="sm"><b>ID:</b> {selectedItem.id || selectedItem.eventDraftId}</Text>
+              <Text size="sm"><b>명칭:</b> {selectedItem.businessName || selectedItem.title}</Text>
             </SimpleGrid>
-            
-            <Divider my="md" />
-            
+            <Divider my="xs" label="최종 결정" labelPosition="center" />
             <Group justify="flex-end">
-              <Button color="red" variant="outline" leftSection={<IconX size={16}/>} onClick={() => setRejectModalOpened(true)}>반려</Button>
-              <Button color="green" leftSection={<IconCheck size={16}/>} onClick={() => handleApprove(selectedDraft.id)}>최종 승인</Button>
+              <Button color="red" variant="outline" onClick={() => setRejectModalOpened(true)}>반려</Button>
+              <Button color="green" onClick={handleApprove}>승인 확정</Button>
             </Group>
           </Stack>
         )}
       </Modal>
 
-      {/* 반려 사유 모달 */}
       <Modal opened={rejectModalOpened} onClose={() => setRejectModalOpened(false)} title="반려 사유 입력">
-        <Textarea 
-          label="매니저 전달 메시지"
-          placeholder="반려 사유를 상세히 입력하세요." 
-          value={rejectReason} 
-          onChange={(e) => setRejectReason(e.currentTarget.value)} 
-          minRows={3} 
-        />
+        <Textarea label="사유" value={rejectReason} onChange={(e) => setRejectReason(e.currentTarget.value)} placeholder="사유를 입력하세요." />
         <Button fullWidth mt="md" color="red" onClick={handleReject}>반려 확정</Button>
       </Modal>
-    </Container> 
+    </Container>
   );
 }
-
-export default HqApprovalPage;

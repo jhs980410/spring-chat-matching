@@ -4,14 +4,9 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Entity
-/**
- * [최종 수정]
- * 1. 백틱(`)을 완전히 제거하세요.
- * 2. name에는 테이블명만, schema에는 스키마명만 넣습니다.
- * 이렇게 해야 SQL 실행 시 `ticket_manager`.`sales_contract_draft`로 점(.)이 분리됩니다.
- */
 @Table(name = "sales_contract_draft", catalog = "ticket_manager")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -19,15 +14,50 @@ public class SalesContractDraft {
 
     @Id
     /**
-     * 8081(Manager)에서 이미 생성된 ID(예: 4번)를 조회해야 하므로
-     * 자동 생성 전략(@GeneratedValue)을 사용하지 않습니다.
+     * Manager 서버(8081)에서 생성된 ID를 그대로 사용하므로
+     * @GeneratedValue를 사용하지 않습니다.
      */
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    private DraftStatus status;
+    @Column(name = "partner_draft_id")
+    private Long partnerDraftId;
 
+    @Column(name = "domain_id")
+    private Long domainId;
+
+    @Column(name = "business_name") // DB의 business_name 컬럼 매핑
+    private String businessName;
+
+    @Column(name = "business_number") // DB의 business_number 컬럼 매핑
+    private String businessNumber;
+
+    @Column(name = "settlement_email")
+    private String settlementEmail;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "issue_method")
+    private IssueMethod issueMethod; // ONLINE, ON_SITE, DELIVERY
+
+    @Enumerated(EnumType.STRING)
+    private DraftStatus status; // DRAFT, REQUESTED, APPROVED, REJECTED
+
+    @Column(name = "requested_at")
+    private LocalDateTime requestedAt;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    /**
+     * [비즈니스 로직] 최종 승인 처리
+     */
     public void approve() {
         this.status = DraftStatus.APPROVED;
+    }
+
+    /**
+     * [비즈니스 로직] 반려 처리
+     */
+    public void reject() {
+        this.status = DraftStatus.REJECTED;
     }
 }

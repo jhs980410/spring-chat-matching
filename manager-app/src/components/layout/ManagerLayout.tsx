@@ -44,6 +44,13 @@ export function ManagerLayout() { // children 프롭 제거
             active={location.pathname === '/contracts'}
             onClick={() => nav('/contracts')} 
           />
+            <NavLink 
+            label="판매 계약 요청" 
+            leftSection={<IconListCheck size={18} />} 
+            active={location.pathname === '/contracts/create'}
+            onClick={() => nav('/contracts/new')} 
+          />
+
           
           <Text size="xs" fw={700} c="dimmed" p="xs" mt="md">상품 관리</Text>
           <NavLink 

@@ -1,5 +1,6 @@
 package com.chatmatchingservice.hqadmin.domain.draft.repository;
 
+import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalResponse;
 import com.chatmatchingservice.hqadmin.domain.draft.entity.DraftStatus;
 import com.chatmatchingservice.hqadmin.domain.draft.entity.EventDraftEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,4 +14,7 @@ public interface EventDraftRepository extends JpaRepository<EventDraftEntity, Lo
 
     // DB의 sales_contract_draft_id 컬럼을 기준으로 조회
     Optional<EventDraftEntity> findBySalesContractDraftId(Long salesContractDraftId);
+
+    List<EventDraftEntity> findAllByStatusOrderByCreatedAtDesc(DraftStatus draftStatus);
+
 }

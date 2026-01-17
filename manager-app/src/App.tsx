@@ -8,6 +8,7 @@ import { ManagerLayout } from './components/layout/ManagerLayout';
 import { EventCreatePage } from './pages/event/EventCreatePage';
 import { EventListPage } from './pages/event/EventListPage'; // 추가
 import { ContractListPage } from './pages/contract/ContractListPage'; // 추가
+import { ContractCreatePage } from './pages/contract/ContractCreatePage';
 
 const theme = createTheme({
   primaryColor: 'blue',
@@ -25,6 +26,7 @@ function App() {
             <Route path="/events" element={<EventListPage />} />
             <Route path="/events/new" element={<EventCreatePage />} />
             <Route path="/contracts" element={<ContractListPage />} />
+            <Route path="/contracts/new" element={<ContractCreatePage />} />
           </Route>
         </Routes>
       {/* </BrowserRouter> 제거! */}

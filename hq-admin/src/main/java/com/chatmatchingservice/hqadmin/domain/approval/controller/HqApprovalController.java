@@ -1,13 +1,17 @@
 package com.chatmatchingservice.hqadmin.domain.approval.controller;
 
+import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalListResponse;
 import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalRequest;
 import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalResponse;
 import com.chatmatchingservice.hqadmin.domain.approval.service.HqApprovalService;
+import com.chatmatchingservice.hqadmin.domain.draft.dto.SalesContractDraftRecord;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Tag(
         name = "HQ Approval",
@@ -19,6 +23,19 @@ import org.springframework.web.bind.annotation.*;
 public class HqApprovalController {
 
     private final HqApprovalService approvalService;
+
+
+    /**
+     * 추가된 API: 승인 대기 중인 판매 계약 목록 조회
+     */
+    @Operation(summary = "승인 대기 계약 목록 조회", description = "상태가 REQUESTED인 모든 판매 계약을 최신순으로 가져옵니다.")
+    @GetMapping("/contracts/pending")
+    public ResponseEntity<List<SalesContractDraftRecord>> getPendingContracts(
+            @RequestHeader("X-ADMIN-ID") Long adminId
+    ) {
+        return ResponseEntity.ok(approvalService.getPendingContracts());
+    }
+
 
     /**
      * 1. 판매 계약(Contract) 승인 API
@@ -65,5 +82,26 @@ public class HqApprovalController {
         return ResponseEntity.ok(
                 approvalService.reject(draftId, adminId, request)
         );
+    }
+
+    /**
+     * 추가된 API: 승인 대기 중인 공연 초안 목록 조회
+     * 엔드포인트: GET /api/hq/approvals/events/pending
+     */
+    @Operation(summary = "승인 대기 공연 목록 조회")
+    @GetMapping("/events/pending")
+    public ResponseEntity<List<ApprovalListResponse>> getPendingEvents(
+            @RequestHeader("X-ADMIN-ID") Long adminId
+    ) {
+        // 서비스에서 DraftStatus.REQUESTED 인 EventDraftEntity 목록을 조회하여 반환
+        return ResponseEntity.ok(approvalService.getRequestedDrafts());
+    }
+    //(목록 조회 API)
+    @Operation(summary = "발행 대기(승인 완료) 공연 목록 조회")
+    @GetMapping("/events/approved")
+    public ResponseEntity<List<ApprovalListResponse>> getApprovedEvents(
+            @RequestHeader("X-ADMIN-ID") Long adminId
+    ) {
+        return ResponseEntity.ok(approvalService.getApprovedDrafts());
     }
 }

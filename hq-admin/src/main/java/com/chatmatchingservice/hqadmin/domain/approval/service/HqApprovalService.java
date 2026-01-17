@@ -1,20 +1,24 @@
 package com.chatmatchingservice.hqadmin.domain.approval.service;
 
+import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalListResponse;
 import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalRequest;
 import com.chatmatchingservice.hqadmin.domain.approval.dto.ApprovalResponse;
 import com.chatmatchingservice.hqadmin.domain.approval.entity.ApprovalStatus;
 import com.chatmatchingservice.hqadmin.domain.approval.entity.EventApprovalEntity;
 import com.chatmatchingservice.hqadmin.domain.approval.repository.EventApprovalRepository;
+import com.chatmatchingservice.hqadmin.domain.draft.dto.SalesContractDraftRecord;
 import com.chatmatchingservice.hqadmin.domain.draft.entity.DraftStatus;
 import com.chatmatchingservice.hqadmin.domain.draft.entity.EventDraftEntity;
 import com.chatmatchingservice.hqadmin.domain.draft.entity.SalesContractDraft;
 import com.chatmatchingservice.hqadmin.domain.draft.repository.EventDraftRepository;
 import com.chatmatchingservice.hqadmin.domain.draft.repository.SalesContractDraftRepository;
+import com.chatmatchingservice.hqadmin.domain.publish.repository.EventPublishRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,10 +28,16 @@ public class HqApprovalService {
     private final EventDraftRepository eventDraftRepository;
     private final SalesContractDraftRepository contractDraftRepository; // 추가된 레포지토리
     private final EventApprovalRepository approvalRepository;
+    private final EventPublishRepository eventPublishRepository;
 
-    /**
-     * 1. 판매 계약(Sales Contract) 승인
-     */
+    @Transactional(readOnly = true)
+    public List<SalesContractDraftRecord> getPendingContracts() {
+
+        return contractDraftRepository.findPendingContracts();
+    }
+
+
+
     /**
      * 1. 판매 계약(Sales Contract) 승인
      */
@@ -108,4 +118,39 @@ public class HqApprovalService {
                     throw new IllegalStateException("이미 승인 처리된 Draft입니다.");
                 });
     }
+
+    @Transactional(readOnly = true)
+    public List<ApprovalListResponse> getRequestedDrafts() {
+        // 1. Draft 테이블에서 REQUESTED 상태인 목록 조회
+        List<EventDraftEntity> requestedDrafts =
+                eventDraftRepository.findAllByStatusOrderByCreatedAtDesc(DraftStatus.REQUESTED);
+
+        // 2. 목록용 DTO(ApprovalListResponse)로 변환
+        return requestedDrafts.stream()
+                .map(draft -> ApprovalListResponse.builder()
+                        .eventDraftId(draft.getId())
+                        .title(draft.getTitle()) // Draft 엔티티의 제목 필드 활용
+                        .status(draft.getStatus().name()) // Enum -> String 변환으로 에러 해결
+                        .requestedAt(draft.getCreatedAt())
+                        .build())
+                .toList();
+    }
+    @Transactional(readOnly = true)
+    public List<ApprovalListResponse> getApprovedDrafts() {
+        // 1. APPROVED 상태인 Draft만 조회 [cite: 2026-01-13]
+        List<EventDraftEntity> approvedDrafts =
+                eventDraftRepository.findAllByStatusOrderByCreatedAtDesc(DraftStatus.APPROVED);
+
+        // 2. 이미 발행된(Publish) 내역이 없는 것만 필터링하여 반환 [cite: 2026-01-13]
+        return approvedDrafts.stream()
+                .filter(draft -> eventPublishRepository.findByEventDraftId(draft.getId()).isEmpty())
+                .map(draft -> ApprovalListResponse.builder()
+                        .eventDraftId(draft.getId())
+                        .title(draft.getTitle())
+                        .status(draft.getStatus().name())
+                        .requestedAt(draft.getCreatedAt())
+                        .build())
+                .toList();
+    }
+
 }
