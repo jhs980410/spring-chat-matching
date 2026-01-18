@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
-// Group을 import 목록에 추가했습니다.
+// Group, Container 등 Mantine 컴포넌트 import
 import { Container, Title, Card, Badge, Table, Button, LoadingOverlay, Text, Group } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconPlus, IconExternalLink } from '@tabler/icons-react';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8081/api/manager/contracts'; 
+/**
+ * ❗ [핵심 수정] 하드코딩된 localhost 주소를 제거했습니다.
+ * 브라우저는 이제 현재 도메인의 /api/manager/contracts로 요청을 보냅니다.
+ */
+const API_BASE = '/api/manager/contracts'; 
 const MANAGER_HEADERS = { 'X-MANAGER-ID': '2' };
 
 export function ContractListPage() {
@@ -14,9 +18,14 @@ export function ContractListPage() {
   const [contracts, setContracts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 계약 목록 조회 함수
   const fetchMyContracts = async () => {
     setLoading(true);
     try {
+      /**
+       * Nginx 설정(proxy_pass http://ticket-manager-service:8081)에 의해
+       * 이 요청은 내부 도커 네트워크의 8081 백엔드로 전달됩니다.
+       */
       const res = await axios.get(API_BASE, { headers: MANAGER_HEADERS });
       setContracts(res.data);
     } catch (error) {
@@ -36,6 +45,7 @@ export function ContractListPage() {
     fetchMyContracts();
   }, []);
 
+  // 날짜 포맷팅 유틸리티
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('ko-KR', {
@@ -69,7 +79,6 @@ export function ContractListPage() {
               contracts.map((c) => (
                 <Table.Tr key={c.id}>
                   <Table.Td style={{ width: '100px' }}>#{c.id}</Table.Td>
-                  {/* 수정: Table.Td에는 size 속성이 없으므로 내부 Text 컴포넌트에 적용합니다. */}
                   <Table.Td>
                     <Text fw={700} size="md">{c.businessName}</Text>
                   </Table.Td>
@@ -91,7 +100,6 @@ export function ContractListPage() {
                     <Text size="sm" fw={500}>요청일: {formatDate(c.requestedAt)}</Text>
                   </Table.Td>
                   <Table.Td>
-                    {/* 수정: image_abb39c 에러 해결 (Group import 완료) */}
                     <Group gap="xs">
                       <Button 
                         size="xs" 

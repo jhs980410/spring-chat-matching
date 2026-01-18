@@ -3,12 +3,12 @@ import {
   Container, Title, Card, Table, Badge, Button, Group, 
   Text, Modal, Stack, Divider, SimpleGrid, LoadingOverlay, 
   Textarea, Tabs, Box, ScrollArea 
-} from '@mantine/core'; // [cite: 2026-01-01] Box 추가됨
+} from '@mantine/core'; 
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX, IconSearch, IconFileCertificate, IconTicket } from '@tabler/icons-react';
 import axios from 'axios';
 
-// --- 인터페이스 정의 (백엔드 DTO 구조와 일치) [cite: 2026-01-13] ---
+// --- 인터페이스 정의 (백엔드 DTO 구조와 일치) ---
 interface ContractDraft {
   id: number;
   businessName: string;
@@ -25,7 +25,11 @@ interface EventDraft {
   requestedAt: string;
 }
 
-const API_BASE = 'http://localhost:8082/api/hq/approvals';
+/**
+ * ❗ [핵심 수정] 하드코딩된 localhost 주소를 제거했습니다.
+ * 운영 환경의 Nginx 설정(proxy_pass http://hq-admin:8082)과 연동됩니다.
+ */
+const API_BASE = '/api/hq/approvals';
 const ADMIN_HEADERS = { 'X-ADMIN-ID': '1' };
 
 export function HqApprovalPage() {
@@ -38,15 +42,21 @@ export function HqApprovalPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // 데이터 로드 함수
   const fetchData = async () => {
     setLoading(true);
     try {
       const url = activeTab === 'contracts' ? '/contracts/pending' : '/events/pending';
+      // 상대 경로를 사용하여 요청을 보냅니다.
       const res = await axios.get(`${API_BASE}${url}`, { headers: ADMIN_HEADERS });
       if (activeTab === 'contracts') setContracts(res.data);
       else setEvents(res.data);
     } catch (error) {
-      notifications.show({ title: '데이터 로드 실패', message: 'API 서버 상태를 확인하세요.', color: 'red' });
+      notifications.show({ 
+        title: '데이터 로드 실패', 
+        message: 'API 서버 상태를 확인하세요.', 
+        color: 'red' 
+      });
     } finally {
       setLoading(false);
     }
@@ -54,6 +64,7 @@ export function HqApprovalPage() {
 
   useEffect(() => { fetchData(); }, [activeTab]);
 
+  // 승인 처리 함수
   const handleApprove = async () => {
     if (!selectedItem) return;
     setLoading(true);
@@ -64,7 +75,7 @@ export function HqApprovalPage() {
       await axios.post(`${API_BASE}${endpoint}`, {}, { headers: ADMIN_HEADERS });
       notifications.show({ 
         title: '승인 완료', 
-        message: '성공적으로 승인되었습니다.', // [cite: 2026-01-01] message 필수 추가
+        message: '성공적으로 승인되었습니다.', 
         color: 'green', 
         icon: <IconCheck size={16}/> 
       });
@@ -77,6 +88,7 @@ export function HqApprovalPage() {
     }
   };
 
+  // 반려 처리 함수
   const handleReject = async () => {
     if (!selectedItem || !rejectReason.trim()) {
         notifications.show({ title: '반려 불가', message: '사유를 입력해주세요.', color: 'yellow' });
@@ -84,10 +96,11 @@ export function HqApprovalPage() {
     }
     const targetId = activeTab === 'contracts' ? selectedItem.id : selectedItem.eventDraftId;
     try {
+      // 반려 엔드포인트도 상대 경로를 적용합니다.
       await axios.post(`${API_BASE}/events/${targetId}/reject`, { reason: rejectReason }, { headers: ADMIN_HEADERS });
       notifications.show({ 
         title: '반려 완료', 
-        message: '반려 처리가 완료되었습니다.', // [cite: 2026-01-01] image_b869a6.png 에러 수정
+        message: '반려 처리가 완료되었습니다.', 
         color: 'orange', 
         icon: <IconX size={16}/> 
       });
@@ -133,9 +146,10 @@ export function HqApprovalPage() {
                       <Table.Td style={{ paddingLeft: 20 }}>{item.id}</Table.Td>
                       <Table.Td fw={600}>{item.businessName}</Table.Td>
                       <Table.Td><Badge variant="outline">{item.issueMethod}</Badge></Table.Td>
-                      {/* [cite: 2026-01-01] image_b869c4.png 수정: size 속성 제거 */}
                       <Table.Td>{new Date(item.requestedAt).toLocaleString()}</Table.Td>
-                      <Table.Td><Button variant="light" size="xs" onClick={() => { setSelectedItem(item); setDetailOpened(true); }}>검토</Button></Table.Td>
+                      <Table.Td>
+                        <Button variant="light" size="xs" onClick={() => { setSelectedItem(item); setDetailOpened(true); }}>검토</Button>
+                      </Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -162,7 +176,9 @@ export function HqApprovalPage() {
                       <Table.Td style={{ paddingLeft: 20 }}>{item.eventDraftId}</Table.Td>
                       <Table.Td fw={600}>{item.title}</Table.Td>
                       <Table.Td>{new Date(item.requestedAt).toLocaleString()}</Table.Td>
-                      <Table.Td><Button variant="light" color="teal" size="xs" onClick={() => { setSelectedItem(item); setDetailOpened(true); }}>검토</Button></Table.Td>
+                      <Table.Td>
+                        <Button variant="light" color="teal" size="xs" onClick={() => { setSelectedItem(item); setDetailOpened(true); }}>검토</Button>
+                      </Table.Td>
                     </Table.Tr>
                   ))}
                 </Table.Tbody>
@@ -189,9 +205,18 @@ export function HqApprovalPage() {
       </Modal>
 
       <Modal opened={rejectModalOpened} onClose={() => setRejectModalOpened(false)} title="반려 사유 입력">
-        <Textarea label="사유" value={rejectReason} onChange={(e) => setRejectReason(e.currentTarget.value)} placeholder="사유를 입력하세요." />
-        <Button fullWidth mt="md" color="red" onClick={handleReject}>반려 확정</Button>
+        <Stack>
+          <Textarea 
+            label="사유" 
+            value={rejectReason} 
+            onChange={(e) => setRejectReason(e.currentTarget.value)} 
+            placeholder="사유를 입력하세요." 
+          />
+          <Button fullWidth color="red" onClick={handleReject}>반려 확정</Button>
+        </Stack>
       </Modal>
     </Container>
   );
 }
+
+export default HqApprovalPage;

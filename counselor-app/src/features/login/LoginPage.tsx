@@ -19,7 +19,7 @@ export default function LoginPage() {
         password: pwd,
       });
 
-      // ✅ 핵심 수정 포인트
+
       login(res.data.id, res.data.accessToken);
 
       notifications.show({

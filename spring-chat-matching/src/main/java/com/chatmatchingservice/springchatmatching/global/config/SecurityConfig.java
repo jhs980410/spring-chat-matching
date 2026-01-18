@@ -118,11 +118,14 @@ public class SecurityConfig {
 
         // 개발 환경 전체 허용
         config.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
+                "http://localhost:5173",            // 로컬 테스트용
                 "http://localhost:5174",
-                "http://13.209.214.254",            // 탄력적 IP
-                "http://counselor-app.o-r.kr",     // 상담사 도메인
-                "http://customer-app.o-r.kr"       // 고객 도메인 (있는 경우)
+                "http://13.209.214.254",            // EC2 탄력적 IP
+                "https://jhs-platform.co.kr",       // 메인 도메인
+                "https://customer.jhs-platform.co.kr",
+                "https://admin.jhs-platform.co.kr",
+                "https://manager.jhs-platform.co.kr",
+                "https://counselor.jhs-platform.co.kr"
         ));
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");

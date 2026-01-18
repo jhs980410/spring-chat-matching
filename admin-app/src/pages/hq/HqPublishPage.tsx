@@ -7,9 +7,12 @@ import { notifications } from '@mantine/notifications';
 import { IconRocket, IconRefresh, IconExternalLink } from '@tabler/icons-react';
 import axios from 'axios';
 
-// 백엔드 컨트롤러 @RequestMapping 경로와 일치시킴
-const APPROVAL_API_BASE = 'http://localhost:8082/api/hq/approvals';
-const PUBLISH_API_BASE = 'http://localhost:8082/api/hq/publish';
+/**
+ * ❗ [핵심 수정] 하드코딩된 localhost:8082 주소를 제거했습니다.
+ * 백엔드 컨트롤러 @RequestMapping 경로와 일치하는 상대 경로를 사용합니다.
+ */
+const APPROVAL_API_BASE = '/api/hq/approvals';
+const PUBLISH_API_BASE = '/api/hq/publish';
 const ADMIN_HEADERS = { 'X-ADMIN-ID': '1' };
 
 interface ApprovedDraft {
@@ -24,10 +27,10 @@ export function HqPublishPage() {
   const [loading, setLoading] = useState(false);
 
   // 1. 발행 대기(승인 완료) 목록 로드
-  // 호출 API: GET /api/hq/approvals/events/approved
   const fetchApprovedDrafts = async () => {
     setLoading(true);
     try {
+      // 상대 경로를 통해 hq-admin:8082 백엔드에 요청
       const res = await axios.get(`${APPROVAL_API_BASE}/events/approved`, { 
         headers: ADMIN_HEADERS 
       });
@@ -46,13 +49,15 @@ export function HqPublishPage() {
   useEffect(() => { fetchApprovedDrafts(); }, []);
 
   // 2. 최종 발행(Publish) 실행
-  // 호출 API: POST /api/hq/publish/{draftId}
   const handlePublish = async (id: number, title: string) => {
     if (!window.confirm(`[${title}] 공연을 실시간 운영 서버에 발행하시겠습니까?`)) return;
 
     setLoading(true);
     try {
-      // EventPublishController의 @PostMapping("/{draftId}") 호출
+      /**
+       * ❗ IllegalStateException 방지를 위한 서버 호출 [cite: 2026-01-13]
+       * EventPublishController의 @PostMapping("/{draftId}")를 호출합니다.
+       */
       await axios.post(`${PUBLISH_API_BASE}/${id}`, {}, { 
         headers: ADMIN_HEADERS 
       });
@@ -64,10 +69,18 @@ export function HqPublishPage() {
         icon: <IconRocket size={16} />
       });
       
-      fetchApprovedDrafts(); // 발행된 항목 제거를 위해 목록 새로고침
+      fetchApprovedDrafts(); // 목록 새로고침
     } catch (error: any) {
+      /**
+       * ❗ "APPROVED 상태의 Draft만 publish 가능합니다"와 같은 
+       * 백엔드 에러 메시지를 사용자에게 정확히 전달합니다. [cite: 2026-01-13]
+       */
       const errorMsg = error.response?.data?.message || '발행 중 서버 에러가 발생했습니다.';
-      notifications.show({ title: '발행 실패', message: errorMsg, color: 'red' });
+      notifications.show({ 
+        title: '발행 실패', 
+        message: errorMsg, 
+        color: 'red' 
+      });
     } finally {
       setLoading(false);
     }
@@ -129,7 +142,7 @@ export function HqPublishPage() {
               </Table.Tr>
             )) : (
               <Table.Tr>
-                <Table.Td colSpan={5} align="center" py={50}>
+                <Table.Td colSpan={5} style={{ textAlign: 'center' }} py={50}>
                   <Text c="dimmed">발행 가능한 승인 완료 건이 없습니다.</Text>
                 </Table.Td>
               </Table.Tr>
