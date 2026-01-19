@@ -5,14 +5,16 @@ import {
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconRocket, IconRefresh, IconExternalLink } from '@tabler/icons-react';
-import axios from 'axios';
+/
+import { adminApi } from "../../api/adminApi"; 
 
 /**
- * ❗ [핵심 수정] 하드코딩된 localhost:8082 주소를 제거했습니다.
- * 백엔드 컨트롤러 @RequestMapping 경로와 일치하는 상대 경로를 사용합니다.
+
+ * 1. baseURL에 https://api.jhs-platform.co.kr가 이미 들어있으므로 
+ * 2. 경로에서 중복되는 /api를 제거하거나 adminApi 설정에 맞게 조정합니다.
  */
-const APPROVAL_API_BASE = '/api/hq/approvals';
-const PUBLISH_API_BASE = '/api/hq/publish';
+const APPROVAL_API_BASE = '/hq/approvals';
+const PUBLISH_API_BASE = '/hq/publish';
 const ADMIN_HEADERS = { 'X-ADMIN-ID': '1' };
 
 interface ApprovedDraft {
@@ -30,8 +32,8 @@ export function HqPublishPage() {
   const fetchApprovedDrafts = async () => {
     setLoading(true);
     try {
-      // 상대 경로를 통해 hq-admin:8082 백엔드에 요청
-      const res = await axios.get(`${APPROVAL_API_BASE}/events/approved`, { 
+      //  [수정] axios.get -> adminApi.get
+      const res = await adminApi.get(`${APPROVAL_API_BASE}/events/approved`, { 
         headers: ADMIN_HEADERS 
       });
       setApprovedDrafts(res.data);
@@ -55,10 +57,10 @@ export function HqPublishPage() {
     setLoading(true);
     try {
       /**
-       * ❗ IllegalStateException 방지를 위한 서버 호출 [cite: 2026-01-13]
-       * EventPublishController의 @PostMapping("/{draftId}")를 호출합니다.
+       *  [수정] axios.post -> adminApi.post
+       * 이제 요청이 https://api.jhs-platform.co.kr/hq/publish/{id}로 정확히 날아갑니다.
        */
-      await axios.post(`${PUBLISH_API_BASE}/${id}`, {}, { 
+      await adminApi.post(`${PUBLISH_API_BASE}/${id}`, {}, { 
         headers: ADMIN_HEADERS 
       });
 
@@ -71,10 +73,7 @@ export function HqPublishPage() {
       
       fetchApprovedDrafts(); // 목록 새로고침
     } catch (error: any) {
-      /**
-       * ❗ "APPROVED 상태의 Draft만 publish 가능합니다"와 같은 
-       * 백엔드 에러 메시지를 사용자에게 정확히 전달합니다. [cite: 2026-01-13]
-       */
+      //  백엔드의 IllegalStateException 메시지를 그대로 노출합니다. [cite: 2026-01-13]
       const errorMsg = error.response?.data?.message || '발행 중 서버 에러가 발생했습니다.';
       notifications.show({ 
         title: '발행 실패', 

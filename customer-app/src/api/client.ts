@@ -2,7 +2,7 @@
 import api from "../api/axios";
 
 export const apiClient = api.create({
-  baseURL: "/api",
+   baseURL: "http://13.209.214.254:8080/api",
   withCredentials: true,
 });
 

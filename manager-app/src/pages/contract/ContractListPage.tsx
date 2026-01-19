@@ -4,11 +4,11 @@ import { Container, Title, Card, Badge, Table, Button, LoadingOverlay, Text, Gro
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { IconAlertCircle, IconPlus, IconExternalLink } from '@tabler/icons-react';
-import axios from 'axios';
+import { managerApi } from "../../api/managerApi"; 
 
 /**
- * ❗ [핵심 수정] 하드코딩된 localhost 주소를 제거했습니다.
- * 브라우저는 이제 현재 도메인의 /api/manager/contracts로 요청을 보냅니다.
+ * 1. baseURL에 https://api.jhs-platform.co.kr가 이미 들어있으므로
+ * 2. 중복을 방지하기 위해 경로를 조정합니다.
  */
 const API_BASE = '/api/manager/contracts'; 
 const MANAGER_HEADERS = { 'X-MANAGER-ID': '2' };
@@ -23,10 +23,9 @@ export function ContractListPage() {
     setLoading(true);
     try {
       /**
-       * Nginx 설정(proxy_pass http://ticket-manager-service:8081)에 의해
-       * 이 요청은 내부 도커 네트워크의 8081 백엔드로 전달됩니다.
+       * 이제 요청이 https://api.jhs-platform.co.kr/api/manager/contracts 로 정확히 날아갑니다.
        */
-      const res = await axios.get(API_BASE, { headers: MANAGER_HEADERS });
+      const res = await managerApi.get(API_BASE, { headers: MANAGER_HEADERS });
       setContracts(res.data);
     } catch (error) {
       console.error('계약 목록 로딩 실패:', error);

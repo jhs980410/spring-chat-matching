@@ -1,8 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "/api",
-  withCredentials: true, // 쿠키 전송을 위해 필수
+
+  baseURL: "https://api.jhs-platform.co.kr/api", 
+  withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -41,7 +42,7 @@ api.interceptors.response.use(
       try {
         // 3️⃣ 리프레시 토큰으로 엑세스 토큰 재발급 요청
         // 에러 방지를 위해 baseURL이 중복되지 않도록 "/auth/refresh"만 사용 (이미 baseURL이 /api이므로)
-        const { data } = await axios.post("/api/auth/refresh", null, {
+        const { data } = await axios.post("/auth/refresh", null, {
           withCredentials: true,
         });
 

@@ -6,7 +6,7 @@ import {
 } from '@mantine/core'; 
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconX, IconSearch, IconFileCertificate, IconTicket } from '@tabler/icons-react';
-import axios from 'axios';
+import { adminApi } from "../../api/adminApi"; 
 
 // --- 인터페이스 정의 (백엔드 DTO 구조와 일치) ---
 interface ContractDraft {
@@ -26,10 +26,10 @@ interface EventDraft {
 }
 
 /**
- * ❗ [핵심 수정] 하드코딩된 localhost 주소를 제거했습니다.
- * 운영 환경의 Nginx 설정(proxy_pass http://hq-admin:8082)과 연동됩니다.
+ * adminApi의 baseURL에 이미 https://api.jhs-platform.co.kr가 있으므로
+ * 경로 시작의 /api를 제거하여 중복을 방지합니다.
  */
-const API_BASE = '/api/hq/approvals';
+const API_BASE = '/hq/approvals';
 const ADMIN_HEADERS = { 'X-ADMIN-ID': '1' };
 
 export function HqApprovalPage() {
@@ -47,8 +47,8 @@ export function HqApprovalPage() {
     setLoading(true);
     try {
       const url = activeTab === 'contracts' ? '/contracts/pending' : '/events/pending';
-      // 상대 경로를 사용하여 요청을 보냅니다.
-      const res = await axios.get(`${API_BASE}${url}`, { headers: ADMIN_HEADERS });
+      // ✅ [수정] adminApi.get 사용
+      const res = await adminApi.get(`${API_BASE}${url}`, { headers: ADMIN_HEADERS });
       if (activeTab === 'contracts') setContracts(res.data);
       else setEvents(res.data);
     } catch (error) {
@@ -72,7 +72,8 @@ export function HqApprovalPage() {
     const endpoint = activeTab === 'contracts' ? `/contracts/${targetId}/approve` : `/events/${targetId}/approve`;
 
     try {
-      await axios.post(`${API_BASE}${endpoint}`, {}, { headers: ADMIN_HEADERS });
+      //  [수정] adminApi.post 사용
+      await adminApi.post(`${API_BASE}${endpoint}`, {}, { headers: ADMIN_HEADERS });
       notifications.show({ 
         title: '승인 완료', 
         message: '성공적으로 승인되었습니다.', 
@@ -96,8 +97,8 @@ export function HqApprovalPage() {
     }
     const targetId = activeTab === 'contracts' ? selectedItem.id : selectedItem.eventDraftId;
     try {
-      // 반려 엔드포인트도 상대 경로를 적용합니다.
-      await axios.post(`${API_BASE}/events/${targetId}/reject`, { reason: rejectReason }, { headers: ADMIN_HEADERS });
+      //  [수정] adminApi.post 사용
+      await adminApi.post(`${API_BASE}/events/${targetId}/reject`, { reason: rejectReason }, { headers: ADMIN_HEADERS });
       notifications.show({ 
         title: '반려 완료', 
         message: '반려 처리가 완료되었습니다.', 

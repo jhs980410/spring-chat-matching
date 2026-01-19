@@ -4,7 +4,9 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { notifications } from '@mantine/notifications';
+import { IconCheck } from '@tabler/icons-react';
+import { managerApi } from "../../api/managerApi"; 
 
 export function ContractCreatePage() {
   const nav = useNavigate();
@@ -28,32 +30,51 @@ export function ContractCreatePage() {
   const handleSubmit = async (values: typeof form.values) => {
     try {
       const headers = { 'X-MANAGER-ID': '2' };
-      const res = await axios.post('/api/manager/contracts', values, { headers });
+
+      /**
+    
+       * 1. 계약 Draft 생성
+       */
+      const res = await managerApi.post('/api/manager/contracts', values, { headers });
       const contractId = res.data;
-      await axios.post(`/api/manager/contracts/${contractId}/request`, {}, { headers });
+
+      /**
+       * 2. 생성된 ID로 승인 요청(Request) 전송
+       */
+      await managerApi.post(`/api/manager/contracts/${contractId}/request`, {}, { headers });
       
-      alert('판매 계약 요청이 승인 대기 상태로 등록되었습니다.');
+      notifications.show({
+        title: '계약 신청 완료',
+        message: '판매 계약 요청이 승인 대기 상태로 등록되었습니다.',
+        color: 'green',
+        icon: <IconCheck size={16} />
+      });
+      
       nav('/contracts');
-    } catch (error) {
+    } catch (error: any) {
       console.error('계약 등록 실패:', error);
-      alert('등록 중 오류가 발생했습니다.');
+      const errorMsg = error.response?.data?.message || '등록 중 오류가 발생했습니다.';
+      notifications.show({
+        title: '등록 실패',
+        message: errorMsg,
+        color: 'red'
+      });
     }
   };
 
   return (
-    // 1. 리스트 페이지와 동일하게 size={1600} fluid 적용
     <Container size={1600} fluid py="xl">
       <Group justify="space-between" mb="lg">
-        <Title order={2}>판매 계약 신청</Title>
-        <Text size="sm" c="dimmed">사업자 정보 및 정산 이메일을 정확히 입력해주세요.</Text>
+        <Box>
+          <Title order={2}>판매 계약 신청</Title>
+          <Text size="sm" c="dimmed">사업자 정보 및 정산 이메일을 정확히 입력해주세요.</Text>
+        </Box>
       </Group>
       
-      {/* 2. maxWidth를 제거하여 리스트 카드처럼 화면을 꽉 채우게 함 */}
       <Card withBorder padding="xl" radius="md" shadow="sm">
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="xl">
             
-            {/* 3. Grid를 사용해 넓은 화면을 효율적으로 활용 */}
             <div>
               <Text fw={700} size="lg" mb="md" c="blue.8">🏢 사업자 기본 정보</Text>
               <Grid gutter="md">
@@ -121,3 +142,7 @@ export function ContractCreatePage() {
     </Container>
   );
 }
+
+// Box 컴포넌트 import 누락 방지를 위한 추가 설명
+import { Box } from '@mantine/core'; 
+export default ContractCreatePage;
