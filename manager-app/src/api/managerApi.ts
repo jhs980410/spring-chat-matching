@@ -17,7 +17,7 @@ export const managerApi = axios.create({
  */
 export const createEventDraft = async (eventData: any) => {
   
-  const response = await managerApi.post("/api/drafts", eventData);
+  const response = await managerApi.post("/api/manager/drafts", eventData);
   return response.data;
 };
 
@@ -26,7 +26,7 @@ export const createEventDraft = async (eventData: any) => {
  * 실제 요청 주소: https://api.jhs-platform.co.kr/api/drafts/my
  */
 export const getMyDrafts = async () => {
-  const response = await managerApi.get("/api/drafts/my");
+  const response = await managerApi.get("/api/manager/drafts");
   return response.data;
 };
 

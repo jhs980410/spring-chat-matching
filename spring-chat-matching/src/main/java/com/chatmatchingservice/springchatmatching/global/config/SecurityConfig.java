@@ -125,7 +125,8 @@ public class SecurityConfig {
                 "https://customer.jhs-platform.co.kr",
                 "https://admin.jhs-platform.co.kr",
                 "https://manager.jhs-platform.co.kr",
-                "https://counselor.jhs-platform.co.kr"
+                "https://counselor.jhs-platform.co.kr",
+                "https://api.jhs-platform.co.kr"
         ));
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");

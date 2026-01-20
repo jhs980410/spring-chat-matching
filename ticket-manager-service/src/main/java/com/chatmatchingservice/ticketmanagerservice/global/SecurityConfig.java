@@ -34,7 +34,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/manager/**").permitAll()
 
                         // 3. 기존 Draft API 허용
-                        .requestMatchers("/api/drafts/**").permitAll()
+                        .requestMatchers("/api/manager/drafts/**").permitAll()
 
                         // 4. 나머지는 인증 필요
                         .anyRequest().authenticated()
